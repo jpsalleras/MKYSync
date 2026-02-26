@@ -1,0 +1,235 @@
+@page
+@model DbSync.Web.Pages.Versions.IndexModel
+@{
+    ViewData["Title"] = "Historial de Versiones";
+}
+
+<h2><i class="bi bi-clock-history"></i> Historial de Versiones</h2>
+<p class="text-muted">Versiones registradas por el trigger DDL en cada servidor de base de datos, el cliente debe tener habilitado el control de versiones</p>
+
+<!-- Selector de cliente y ambiente -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Cliente</label>
+                <select name="clienteId" asp-items="Model.ClientesList" class="form-select">
+                    <option value="">-- Seleccionar --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Ambiente</label>
+                <select name="ambiente" class="form-select">
+                    <option value="PR" selected="@(Model.Ambiente == "PR")">PR</option>
+                    <option value="QA" selected="@(Model.Ambiente == "QA")">QA</option>
+                    <option value="DEV" selected="@(Model.Ambiente == "DEV")">DEV</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Filtrar por nombre</label>
+                <input type="text" name="filtro" value="@Model.Filtro" class="form-control" placeholder="Nombre del objeto..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100" data-loading="Consultando..." data-overlay>
+                    <i class="bi bi-search"></i> Consultar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage</div>
+}
+
+@if (Model.DbCheckMessage != null && Model.Stats == null)
+{
+    <div class="alert alert-warning"><i class="bi bi-info-circle"></i> @Model.DbCheckMessage</div>
+}
+
+@if (Model.Stats != null && Model.Stats.Any())
+{
+    <div class="row">
+        <!-- Lista de SPs con versiones -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul"></i> Objetos Versionados (@Model.Stats.Count)</span>
+                    <small class="text-muted">@Model.SelectedCliente?.Nombre - @Model.Ambiente</small>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 75vh; overflow-y: auto;">
+                    @foreach (var sp in Model.Stats)
+                    {
+                        var isSelected = sp.FullName == Model.SelectedObject;
+                        <a href="?clienteId=@Model.ClienteId&ambiente=@Model.Ambiente&filtro=@Model.Filtro&selectedObject=@sp.FullName"
+                           class="list-group-item list-group-item-action @(isSelected ? "active" : "")">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    @{
+                                        var typeBadgeClass = sp.ObjectType switch
+                                        {
+                                            "PROCEDURE" => "bg-primary",
+                                            "VIEW" => "bg-info",
+                                            "FUNCTION" => "bg-success",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @typeBadgeClass me-1">@sp.ShortType</span>
+                                    <code class="@(isSelected ? "text-white" : "")">@sp.FullName</code>
+                                    <br />
+                                    <small class="@(isSelected ? "text-white-50" : "text-muted")">
+                                        DB: @sp.DatabaseName
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge @(isSelected ? "bg-light text-dark" : "bg-primary")">
+                                        v@(sp.CurrentVersion) (@sp.TotalVersions ver.)
+                                    </span>
+                                    <br />
+                                    <small class="@(isSelected ? "text-white-50" : "text-muted")">
+                                        @sp.LastModified.ToString("dd/MM/yy HH:mm")
+                                    </small>
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalle: historial de versiones del SP seleccionado -->
+        <div class="col-md-7">
+            @if (Model.SelectedObjectHistory != null && Model.SelectedObjectHistory.Any())
+            {
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <i class="bi bi-git"></i> Versiones de <code>@Model.SelectedObject</code>
+                    </div>
+                    <div class="card-body p-0">
+                        <table id="tblVersiones" class="table table-sm table-hover mb-0 sortable-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th data-sort-type="number">Ver</th>
+                                    <th>Evento</th>
+                                    <th data-sort-type="date">Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Host</th>
+                                    <th data-no-sort>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var v in Model.SelectedObjectHistory)
+                                {
+                                    var eventClass = v.EventType switch
+                                    {
+                                        var e when e.StartsWith("CREATE") => "text-success",
+                                        var e when e.StartsWith("DROP") => "text-danger",
+                                        _ => "text-warning"
+                                    };
+                                    <tr>
+                                        <td><strong>v@(v.VersionNumber)</strong></td>
+                                        <td><span class="@eventClass">@v.EventType</span></td>
+                                        <td>@v.ModifiedDate.ToString("dd/MM/yy HH:mm:ss")</td>
+                                        <td>@v.ModifiedBy</td>
+                                        <td><small class="text-muted">@v.HostName</small></td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="/Versions/Detail?clienteId=@Model.ClienteId&ambiente=@Model.Ambiente&historyId=@v.HistoryID"
+                                                   class="btn btn-outline-primary btn-sm" title="Ver definición">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-info btn-sm btn-compare"
+                                                        data-id="@v.HistoryID" data-version="@v.VersionNumber"
+                                                        title="Seleccionar para comparar">
+                                                    <i class="bi bi-file-diff"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Comparador de versiones -->
+                <div class="card" id="compareCard">
+                    <div class="card-header"><i class="bi bi-arrow-left-right"></i> Comparar Versiones</div>
+                    <div class="card-body">
+                        <form method="get" action="/Versions/Compare" class="row g-2 align-items-end">
+                            <input type="hidden" name="clienteId" value="@Model.ClienteId" />
+                            <input type="hidden" name="ambiente" value="@Model.Ambiente" />
+                            <div class="col-md-4">
+                                <label class="form-label">Versión A</label>
+                                <select name="historyId1" id="selVersion1" class="form-select form-select-sm">
+                                    @foreach (var v in Model.SelectedObjectHistory)
+                                    {
+                                        <option value="@v.HistoryID">v@(v.VersionNumber) - @v.EventType (@v.ModifiedDate.ToString("dd/MM HH:mm"))</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Versión B</label>
+                                <select name="historyId2" id="selVersion2" class="form-select form-select-sm">
+                                    @foreach (var v in Model.SelectedObjectHistory)
+                                    {
+                                        <option value="@v.HistoryID" selected="@(v == Model.SelectedObjectHistory.Skip(1).FirstOrDefault())">
+                                            v@(v.VersionNumber) - @v.EventType (@v.ModifiedDate.ToString("dd/MM HH:mm"))
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-info btn-sm w-100" data-loading="Comparando..." data-overlay>
+                                    <i class="bi bi-file-diff"></i> Comparar
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="/Versions/Compare?clienteId=@Model.ClienteId&ambiente=@Model.Ambiente&historyId1=@Model.SelectedObjectHistory.FirstOrDefault()?.HistoryID&vsActual=true"
+                                   class="btn btn-outline-warning btn-sm w-100" title="Comparar última versión vs lo que hay ahora en el ambiente"
+                                   data-loading="Cargando..." data-overlay>
+                                    <i class="bi bi-database"></i> vs Actual
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+            else if (Model.SelectedObject != null)
+            {
+                <div class="alert alert-info">No se encontraron versiones para <code>@Model.SelectedObject</code></div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body text-center text-muted py-5">
+                        <i class="bi bi-arrow-left" style="font-size: 2rem"></i>
+                        <p class="mt-2">Seleccioná un objeto de la lista para ver sus versiones</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Model.ClienteId.HasValue && Model.Stats != null)
+{
+    <div class="alert alert-info">No se encontraron objetos versionados con ese filtro.</div>
+}
+
+@section Scripts {
+<script>
+    // Click en botón comparar setea los selects
+    document.querySelectorAll('.btn-compare').forEach(btn => {
+        btn.addEventListener('click', function () {
+            var id = this.dataset.id;
+            var already1 = document.getElementById('selVersion1')?.value;
+            if (already1 != id) {
+                document.getElementById('selVersion2').value = id;
+            } else {
+                document.getElementById('selVersion1').value = id;
+            }
+        });
+    });
+</script>
+}

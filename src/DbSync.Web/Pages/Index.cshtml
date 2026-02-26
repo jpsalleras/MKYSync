@@ -1,0 +1,199 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <p class="text-muted">Estado general del sistema</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-primary">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">@Model.TotalClientes</div>
+                <div class="stat-label">Clientes Activos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-success">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">@Model.TotalAmbientes</div>
+                <div class="stat-label">Ambientes Configurados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-info">
+            <div class="card-body text-center">
+                <div class="stat-number text-info">@Model.TotalScans</div>
+                <div class="stat-label">Scans Ejecutados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-warning">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">@Model.CambiosDetectados7Dias</div>
+                <div class="stat-label">Cambios (7 dias)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ultimo Scan -->
+@if (Model.UltimoScan != null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-radar"></i> Ultimo Scan
+                    <span class="badge @(Model.UltimoScan.Status == DbSync.Core.Models.ScanStatus.Completed ? "bg-success" : Model.UltimoScan.Status == DbSync.Core.Models.ScanStatus.CompletedWithErrors ? "bg-warning" : "bg-danger") ms-2">
+                        @Model.UltimoScan.Status
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col">
+                            <strong>@Model.UltimoScan.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</strong>
+                            <div class="text-muted small">Fecha</div>
+                        </div>
+                        <div class="col">
+                            <strong>@Model.UltimoScan.TotalClientes</strong>
+                            <div class="text-muted small">Clientes</div>
+                        </div>
+                        <div class="col">
+                            <strong>@Model.UltimoScan.TotalObjectsScanned</strong>
+                            <div class="text-muted small">Objetos</div>
+                        </div>
+                        <div class="col">
+                            <strong class="@(Model.UltimoScan.TotalChangesDetected > 0 ? "text-warning" : "")">@Model.UltimoScan.TotalChangesDetected</strong>
+                            <div class="text-muted small">Cambios</div>
+                        </div>
+                        <div class="col">
+                            <strong class="@(Model.UltimoScan.TotalErrors > 0 ? "text-danger" : "")">@Model.UltimoScan.TotalErrors</strong>
+                            <div class="text-muted small">Errores</div>
+                        </div>
+                        @if (Model.UltimoScan.CompletedAt.HasValue)
+                        {
+                            <div class="col">
+                                <strong>@((Model.UltimoScan.CompletedAt.Value - Model.UltimoScan.StartedAt).TotalSeconds.ToString("F1"))s</strong>
+                                <div class="text-muted small">Duracion</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <!-- Acciones rapidas -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-lightning"></i> Acciones</div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/Compare" class="btn btn-outline-primary">
+                        <i class="bi bi-file-diff"></i> Comparar Ambientes
+                    </a>
+                    <a href="/Clientes" class="btn btn-outline-secondary">
+                        <i class="bi bi-building"></i> Gestionar Clientes
+                    </a>
+                    <a href="/Scanner/Logs" class="btn btn-outline-info">
+                        <i class="bi bi-list-check"></i> Ver Scans
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ultimos cambios detectados -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Ultimos Cambios Detectados</div>
+            <div class="card-body p-0">
+                @if (Model.UltimosCambios.Any())
+                {
+                    <div class="table-search-bar">
+                        <span class="search-count" data-search-count="tblDashCambios"></span>
+                        <input type="text" class="form-control form-control-sm" data-table-search="tblDashCambios" placeholder="Buscar..." />
+                    </div>
+                    <table id="tblDashCambios" class="table table-sm table-hover mb-0 sortable-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Objeto</th>
+                                <th>Cliente</th>
+                                <th>Ambiente</th>
+                                <th data-sort-type="date">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cambio in Model.UltimosCambios)
+                            {
+                                var badgeClass = cambio.ChangeType switch
+                                {
+                                    DbSync.Core.Models.ObjectChangeType.Created => "bg-success",
+                                    DbSync.Core.Models.ObjectChangeType.Modified => "bg-warning text-dark",
+                                    DbSync.Core.Models.ObjectChangeType.Deleted => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+                                <tr>
+                                    <td><span class="badge @badgeClass">@cambio.ChangeType</span></td>
+                                    <td><code>@cambio.ObjectFullName</code></td>
+                                    <td>@cambio.ClienteCodigo</td>
+                                    <td>@cambio.Ambiente</td>
+                                    <td class="text-muted">@cambio.DetectedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted p-3 mb-0">No hay cambios detectados</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.UltimasSync.Any())
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-clock-history"></i> Ultimas Sincronizaciones Manuales</div>
+                <div class="card-body p-0">
+                    <table id="tblDashSync" class="table table-sm table-hover mb-0 sortable-table">
+                        <tbody>
+                            @foreach (var sync in Model.UltimasSync)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge @(sync.Exitoso ? "bg-success" : "bg-danger")">
+                                            @sync.AccionRealizada
+                                        </span>
+                                    </td>
+                                    <td><code>@sync.NombreObjeto</code></td>
+                                    <td class="text-muted small">@sync.Cliente?.Codigo</td>
+                                    <td class="text-muted small">@sync.AmbienteOrigen → @sync.AmbienteDestino</td>
+                                    <td class="text-muted small">@sync.Usuario</td>
+                                    <td class="text-muted">@sync.FechaEjecucion.ToString("dd/MM HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}

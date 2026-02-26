@@ -1,0 +1,274 @@
+@page
+@model DbSync.Web.Pages.ObjetosBase.IndexModel
+@{
+    ViewData["Title"] = "Objetos Base";
+    var totalObjetos = Model.ObjetosGlobales.Count + Model.ObjetosCliente.Count;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2><i class="bi bi-box-seam"></i> Objetos Base de Aplicación</h2>
+        <p class="text-muted mb-0">Objetos del sistema que se escanean automaticamente. Total: <strong>@totalObjetos</strong> (@Model.ObjetosGlobales.Count globales, @Model.ObjetosCliente.Count por cliente)</p>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <a href="/ObjetosBase/Import" class="btn btn-success">
+            <i class="bi bi-download"></i> Importar desde Cliente
+        </a>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Mensaje))
+{
+    <div class="alert @(Model.MensajeExito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+        @Model.Mensaje
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (User.IsInRole("Admin"))
+{
+    <!-- Agregar objeto manualmente -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> Agregar Objeto Base</div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="Add">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small">Tipo</label>
+                        <select asp-for="NuevoTipo" class="form-select form-select-sm">
+                            <option value="SP">SP</option>
+                            <option value="VIEW">VIEW</option>
+                            <option value="FN">FN</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Nombre (schema.nombre)</label>
+                        <input asp-for="NuevoNombre" class="form-control form-control-sm"
+                               placeholder="dbo.usp_GetPacientes" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Cliente</label>
+                        <select asp-for="NuevoClienteId" class="form-select form-select-sm">
+                            <option value="">Global (todos)</option>
+                            @foreach (var c in Model.Clientes)
+                            {
+                                <option value="@c.Id">@c.Codigo</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Notas</label>
+                        <input asp-for="NuevaNotas" class="form-control form-control-sm"
+                               placeholder="Opcional" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-lg"></i> Agregar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Objetos base globales -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-globe"></i> Objetos Globales
+        <span class="badge bg-secondary ms-1">@Model.ObjetosGlobales.Count</span>
+        <small class="text-muted ms-2">Se escanean para todos los clientes</small>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.ObjetosGlobales.Any())
+        {
+            <div class="table-search-bar">
+                <span class="search-count" data-search-count="tblGlobales">@Model.ObjetosGlobales.Count registros</span>
+                <input type="text" class="form-control form-control-sm" data-table-search="tblGlobales" placeholder="Buscar..." />
+            </div>
+            <table id="tblGlobales" class="table table-hover table-sm mb-0 sortable-table">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px">Tipo</th>
+                        <th>Nombre Objeto</th>
+                        <th>Notas</th>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <th style="width: 80px" data-no-sort></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var obj in Model.ObjetosGlobales)
+                    {
+                        var badgeClass = obj.TipoObjeto switch
+                        {
+                            "SP" => "bg-primary",
+                            "VIEW" => "bg-info",
+                            "FN" => "bg-success",
+                            _ => "bg-secondary"
+                        };
+                        <tr>
+                            <td><span class="badge @badgeClass">@obj.TipoObjeto</span></td>
+                            <td><code>@obj.NombreObjeto</code></td>
+                            <td class="text-muted small">
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <span class="editable-nota" data-id="@obj.Id" title="Click para editar">@obj.Notas</span>
+                                }
+                                else
+                                {
+                                    @obj.Notas
+                                }
+                            </td>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <td>
+                                    <form method="post" asp-page-handler="Delete" class="d-inline">
+                                        <input type="hidden" name="id" value="@obj.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('¿Eliminar @obj.NombreObjeto?')"
+                                                title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                <p class="mt-2">No hay objetos base globales. El scanner escaneara todos los objetos.</p>
+                <p class="small">Agregue objetos manualmente o importe desde un cliente.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Objetos base por cliente -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-building"></i> Objetos por Cliente
+        <span class="badge bg-secondary ms-1">@Model.ObjetosCliente.Count</span>
+        <small class="text-muted ms-2">Se escanean solo para el cliente asignado</small>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.ObjetosCliente.Any())
+        {
+            <div class="table-search-bar">
+                <span class="search-count" data-search-count="tblCliente">@Model.ObjetosCliente.Count registros</span>
+                <input type="text" class="form-control form-control-sm" data-table-search="tblCliente" placeholder="Buscar..." />
+            </div>
+            <table id="tblCliente" class="table table-hover table-sm mb-0 sortable-table">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px">Tipo</th>
+                        <th>Nombre Objeto</th>
+                        <th>Cliente</th>
+                        <th>Notas</th>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <th style="width: 80px" data-no-sort></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var obj in Model.ObjetosCliente)
+                    {
+                        var badgeClass = obj.TipoObjeto switch
+                        {
+                            "SP" => "bg-primary",
+                            "VIEW" => "bg-info",
+                            "FN" => "bg-success",
+                            _ => "bg-secondary"
+                        };
+                        <tr>
+                            <td><span class="badge @badgeClass">@obj.TipoObjeto</span></td>
+                            <td><code>@obj.NombreObjeto</code></td>
+                            <td><span class="badge bg-dark">@obj.Cliente?.Codigo</span></td>
+                            <td class="text-muted small">
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <span class="editable-nota" data-id="@obj.Id" title="Click para editar">@obj.Notas</span>
+                                }
+                                else
+                                {
+                                    @obj.Notas
+                                }
+                            </td>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <td>
+                                    <form method="post" asp-page-handler="Delete" class="d-inline">
+                                        <input type="hidden" name="id" value="@obj.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('¿Eliminar @obj.NombreObjeto de @obj.Cliente?.Codigo?')"
+                                                title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted p-3 mb-0">No hay objetos base específicos por cliente.</p>
+        }
+    </div>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+    <style>
+        .editable-nota { cursor: pointer; min-width: 60px; display: inline-block; }
+        .editable-nota:hover { background: #f0f0f0; border-radius: 3px; }
+        .editable-nota:empty::after { content: '(sin notas)'; color: #aaa; font-style: italic; }
+    </style>
+    <script>
+        document.addEventListener('click', function (e) {
+            var span = e.target.closest('.editable-nota');
+            if (!span || span.querySelector('input')) return;
+
+            var currentText = span.textContent.trim();
+            var id = span.dataset.id;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'form-control form-control-sm';
+            input.style.width = '100%';
+            span.textContent = '';
+            span.appendChild(input);
+            input.focus();
+            input.select();
+
+            function save() {
+                var newVal = input.value.trim();
+                span.textContent = newVal;
+                if (newVal !== currentText) {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    fetch('?handler=UpdateNotes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                        body: 'id=' + encodeURIComponent(id) + '&notas=' + encodeURIComponent(newVal)
+                    });
+                }
+            }
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                if (ev.key === 'Escape') { span.textContent = currentText; }
+            });
+        });
+    </script>
+}

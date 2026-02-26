@@ -1,0 +1,423 @@
+@page
+@model DbSync.Web.Pages.Clientes.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "Nuevo Cliente" : "Editar Cliente";
+}
+
+<h2><i class="bi bi-building"></i> @ViewData["Title"]</h2>
+
+@if (!string.IsNullOrEmpty(Model.ProvisionMessage))
+{
+    <div class="alert @(Model.ProvisionSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show">
+        <pre class="mb-0" style="white-space: pre-wrap;">@Model.ProvisionMessage</pre>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">Datos del Cliente</div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" asp-for="Cliente.Id" />
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Código <span class="text-danger">*</span></label>
+                            <input asp-for="Cliente.Codigo" class="form-control" placeholder="HOSP-CENTRAL" required />
+                            <small class="text-muted">Se usa para detectar objetos custom</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input asp-for="Cliente.Nombre" class="form-control" placeholder="Hospital Central" required />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Activo</label>
+                            <div class="form-check mt-2">
+                                <input asp-for="Cliente.Activo" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Sí</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+                    <h5>Ambientes</h5>
+
+                    @for (int i = 0; i < Model.AmbientesConfig.Count; i++)
+                    {
+                        var amb = Model.AmbientesConfig[i];
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1">
+                                        <span class="badge bg-secondary">@amb.Ambiente</span>
+                                        <input type="hidden" name="AmbientesConfig[@i].Ambiente" value="@amb.Ambiente" />
+                                        <input type="hidden" name="AmbientesConfig[@i].Id" value="@amb.Id" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input name="AmbientesConfig[@i].Server" value="@amb.Server" class="form-control form-control-sm" placeholder="Servidor" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input name="AmbientesConfig[@i].Database" value="@amb.Database" class="form-control form-control-sm" placeholder="Base de Datos" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input name="AmbientesConfig[@i].UserId" value="@amb.UserId" class="form-control form-control-sm" placeholder="Usuario (vacío=WinAuth)" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input name="AmbientesConfig[@i].Password" value="" type="password" class="form-control form-control-sm" placeholder="@(amb.Id > 0 ? "••••••" : "Password")" />
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-success btn-test-conn"
+                                                data-index="@i" title="Probar conexión">
+                                            <i class="bi bi-plug"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info btn-query-version"
+                                                data-index="@i" title="Consultar versión">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                        <div class="form-check form-switch mb-0" title="Notificar cambios a usuarios asignados">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="AmbientesConfig[@i].NotificarCambios" value="true"
+                                                   id="notif_@i"
+                                                   @(amb.NotificarCambios ? "checked" : "") />
+                                            <label class="form-check-label" for="notif_@i">
+                                                <i class="bi @(amb.NotificarCambios ? "bi-bell-fill text-warning" : "bi-bell-slash text-muted")" id="notifIcon_@i"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(amb.Server))
+                                {
+                                    <div class="row mt-1 vc-inline-status" data-amb="@amb.Ambiente" style="display:none;">
+                                        <div class="col-md-1"></div>
+                                        <div class="col-md-11">
+                                            <small class="vc-inline-content"></small>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary" data-loading="Guardando..."><i class="bi bi-check-lg"></i> Guardar</button>
+                        <a href="/Clientes" class="btn btn-outline-secondary">Cancelar</a>
+                        @if (!Model.IsNew)
+                        {
+                            <button type="button" class="btn btn-outline-danger float-end"
+                                    data-bs-toggle="modal" data-bs-target="#deleteClienteModal">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (!Model.IsNew && Model.AmbientesConfig.Any(a => !string.IsNullOrEmpty(a.Server)))
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-git"></i> Historial de Versiones</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnCheckVcStatus" onclick="checkVcStatus()">
+                        <i class="bi bi-arrow-clockwise"></i> Verificar estado
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Registra automaticamente cada cambio (CREATE/ALTER/DROP) de stored procedures, views y functions
+                        en la tabla ObjectChangeHistory dentro de la base de cada ambiente.
+                    </p>
+                    <div id="vcStatusContainer">
+                        <p class="text-muted small"><i class="bi bi-info-circle"></i> Presione "Verificar estado" para consultar los ambientes.</p>
+                    </div>
+                    @foreach (var amb in Model.AmbientesConfig.Where(a => !string.IsNullOrEmpty(a.Server)))
+                    {
+                        var ambKey = amb.Ambiente.ToString();
+                        <form method="post" asp-page-handler="Deactivate" class="d-inline" id="formDeactivate_@ambKey" style="display:none;">
+                            <input type="hidden" name="Cliente.Id" value="@Model.Cliente.Id" />
+                            <input type="hidden" name="ambiente" value="@ambKey" />
+                        </form>
+                        <form method="post" asp-page-handler="Provision" class="d-inline" id="formProvision_@ambKey" style="display:none;">
+                            <input type="hidden" name="Cliente.Id" value="@Model.Cliente.Id" />
+                            <input type="hidden" name="ambiente" value="@ambKey" />
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal: Activar/Desactivar versionado -->
+<div class="modal fade" id="vcModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="vcModalHeader">
+                <h5 class="modal-title" id="vcModalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="vcModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn" id="vcModalConfirm" onclick="submitVcAction()"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.IsNew)
+{
+    <!-- Modal: Eliminar cliente -->
+    <div class="modal fade" id="deleteClienteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Eliminar Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Esta a punto de eliminar el cliente <strong>@Model.Cliente.Nombre</strong>.</p>
+                    <p class="text-danger mb-0">Esta accion no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="submitDeleteCliente()">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+var vcPendingAction = null;
+var vcPendingAmb = null;
+
+function showVcModal(action, ambiente) {
+    vcPendingAction = action;
+    vcPendingAmb = ambiente;
+
+    var header = document.getElementById('vcModalHeader');
+    var title = document.getElementById('vcModalTitle');
+    var body = document.getElementById('vcModalBody');
+    var btn = document.getElementById('vcModalConfirm');
+
+    if (action === 'activate') {
+        header.className = 'modal-header bg-success text-white';
+        title.innerHTML = '<i class="bi bi-play-circle"></i> Activar Versionado';
+        body.innerHTML = '<p>Se creara la tabla <strong>ObjectChangeHistory</strong>, el trigger DDL y los SPs de consulta en el ambiente <strong>' + ambiente + '</strong>.</p>' +
+            '<p class="mb-0 text-muted small">Esto registrara automaticamente cada cambio de SPs, Views y Functions.</p>';
+        btn.className = 'btn btn-success';
+        btn.innerHTML = '<i class="bi bi-play-circle"></i> Activar';
+    } else {
+        header.className = 'modal-header bg-warning';
+        title.innerHTML = '<i class="bi bi-pause-circle"></i> Desactivar Versionado';
+        body.innerHTML = '<p>Se eliminara el trigger DDL en el ambiente <strong>' + ambiente + '</strong>.</p>' +
+            '<p class="mb-0 text-muted small">El historial existente se conserva. Puede reactivarlo en cualquier momento.</p>';
+        btn.className = 'btn btn-warning';
+        btn.innerHTML = '<i class="bi bi-pause-circle"></i> Desactivar';
+    }
+
+    var modal = new bootstrap.Modal(document.getElementById('vcModal'));
+    modal.show();
+}
+
+function submitVcAction() {
+    var modal = bootstrap.Modal.getInstance(document.getElementById('vcModal'));
+    if (modal) modal.hide();
+
+    var formId = vcPendingAction === 'activate'
+        ? 'formProvision_' + vcPendingAmb
+        : 'formDeactivate_' + vcPendingAmb;
+
+    var form = document.getElementById(formId);
+    if (form) {
+        // Show loading overlay
+        var overlay = document.getElementById('loadingOverlay');
+        if (overlay) overlay.style.display = 'flex';
+        setTimeout(function() { form.submit(); }, 200);
+    }
+}
+
+function submitDeleteCliente() {
+    var modal = bootstrap.Modal.getInstance(document.getElementById('deleteClienteModal'));
+    if (modal) modal.hide();
+
+    // Create and submit a form for the Delete handler
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = '?handler=Delete';
+
+    var idInput = document.createElement('input');
+    idInput.type = 'hidden';
+    idInput.name = 'Cliente.Id';
+    idInput.value = '@Model.Cliente.Id';
+    form.appendChild(idInput);
+
+    // Add antiforgery token
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (token) {
+        var tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = '__RequestVerificationToken';
+        tokenInput.value = token.value;
+        form.appendChild(tokenInput);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+async function checkVcStatus() {
+    var btn = document.getElementById('btnCheckVcStatus');
+    var container = document.getElementById('vcStatusContainer');
+    if (!btn || !container) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
+    container.innerHTML = '<p class="text-muted"><i class="bi bi-hourglass-split"></i> Consultando ambientes...</p>';
+
+    try {
+        var resp = await fetch('/Clientes/Edit?handler=CheckVcStatus&clienteId=@Model.Cliente.Id');
+        var data = await resp.json();
+
+        if (!data.ok) {
+            container.innerHTML = '<p class="text-danger"><i class="bi bi-x-circle"></i> ' + (data.message || 'Error') + '</p>';
+            return;
+        }
+
+        var html = '';
+        for (var ambKey in data.status) {
+            var s = data.status[ambKey];
+            var isActive = s.table && s.trigger;
+            var hasTable = s.table;
+
+            // Update inline status in environment cards
+            var inlineRow = document.querySelector(`.vc-inline-status[data-amb="${ambKey}"]`);
+            if (inlineRow) {
+                inlineRow.style.display = '';
+                var inlineContent = inlineRow.querySelector('.vc-inline-content');
+                inlineContent.innerHTML =
+                    '<i class="bi ' + (s.table ? 'bi-check-circle text-success' : 'bi-x-circle text-danger') + '"></i> Tabla ' +
+                    '<i class="bi ' + (s.trigger ? 'bi-check-circle text-success' : 'bi-x-circle text-danger') + ' ms-2"></i> Trigger ' +
+                    '<span class="text-muted ms-2">' + s.message + '</span>';
+            }
+
+            // Build VC card row
+            var badgeClass = isActive ? 'bg-success' : hasTable ? 'bg-warning text-dark' : 'bg-secondary';
+            var statusHtml = isActive
+                ? '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Activo</span>'
+                : hasTable
+                    ? '<span class="text-warning"><i class="bi bi-pause-circle-fill"></i> Pausado <small class="text-muted">(trigger desactivado, historial conservado)</small></span>'
+                    : '<span class="text-muted"><i class="bi bi-circle"></i> No configurado</span>';
+
+            var actionHtml = isActive
+                ? '<button type="button" class="btn btn-sm btn-outline-warning" onclick="showVcModal(\'deactivate\', \'' + ambKey + '\')"><i class="bi bi-pause-circle"></i> Desactivar</button>'
+                : '<button type="button" class="btn btn-sm btn-success" onclick="showVcModal(\'activate\', \'' + ambKey + '\')"><i class="bi bi-play-circle"></i> Activar</button>';
+
+            html += '<div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">' +
+                '<div><span class="badge ' + badgeClass + ' me-2">' + ambKey + '</span>' + statusHtml + '</div>' +
+                '<div>' + actionHtml + '</div></div>';
+        }
+
+        container.innerHTML = html || '<p class="text-muted">No hay ambientes configurados.</p>';
+    } catch (e) {
+        container.innerHTML = '<p class="text-danger"><i class="bi bi-x-circle"></i> Error: ' + e.message + '</p>';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Verificar estado';
+    }
+}
+
+// Toggle bell icon on notification checkbox change
+document.querySelectorAll('.form-check-input[name*="NotificarCambios"]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var idx = this.id.replace('notif_', '');
+        var icon = document.getElementById('notifIcon_' + idx);
+        if (this.checked) {
+            icon.className = 'bi bi-bell-fill text-warning';
+        } else {
+            icon.className = 'bi bi-bell-slash text-muted';
+        }
+    });
+});
+
+document.querySelectorAll('.btn-query-version').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const i = this.dataset.index;
+        const server = document.querySelector(`[name="AmbientesConfig[${i}].Server"]`).value;
+        const database = document.querySelector(`[name="AmbientesConfig[${i}].Database"]`).value;
+        const userId = document.querySelector(`[name="AmbientesConfig[${i}].UserId"]`).value;
+        const password = document.querySelector(`[name="AmbientesConfig[${i}].Password"]`).value;
+
+        if (!server || !database) {
+            alert('Completar Servidor y Base de Datos');
+            return;
+        }
+
+        const icon = this.querySelector('i');
+        icon.className = 'bi bi-hourglass-split';
+        this.disabled = true;
+
+        try {
+            const params = new URLSearchParams({ server, database, handler: 'QueryVersion' });
+            if (userId) params.append('userId', userId);
+            if (password) params.append('password', password);
+
+            const resp = await fetch(`/Clientes/Edit?${params}`);
+            const data = await resp.json();
+
+            icon.className = data.ok ? 'bi bi-info-circle text-info' : 'bi bi-x-circle text-danger';
+            this.title = data.ok ? `Versión: ${data.version}` : `Error: ${data.version}`;
+        } catch (e) {
+            icon.className = 'bi bi-x-circle text-danger';
+            this.title = 'Error: ' + e.message;
+        } finally {
+            this.disabled = false;
+        }
+    });
+});
+
+document.querySelectorAll('.btn-test-conn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const i = this.dataset.index;
+        const server = document.querySelector(`[name="AmbientesConfig[${i}].Server"]`).value;
+        const database = document.querySelector(`[name="AmbientesConfig[${i}].Database"]`).value;
+        const userId = document.querySelector(`[name="AmbientesConfig[${i}].UserId"]`).value;
+        const password = document.querySelector(`[name="AmbientesConfig[${i}].Password"]`).value;
+
+        if (!server || !database) {
+            alert('Completar Servidor y Base de Datos');
+            return;
+        }
+
+        const icon = this.querySelector('i');
+        icon.className = 'bi bi-hourglass-split';
+        this.disabled = true;
+
+        try {
+            const params = new URLSearchParams({ server, database, handler: 'TestConnection' });
+            if (userId) params.append('userId', userId);
+            if (password) params.append('password', password);
+
+            const resp = await fetch(`/Clientes/Edit?${params}`);
+            const data = await resp.json();
+
+            icon.className = data.ok ? 'bi bi-check-circle text-success' : 'bi bi-x-circle text-danger';
+            this.title = data.message;
+            this.classList.remove('btn-outline-success', 'btn-outline-danger');
+            this.classList.add(data.ok ? 'btn-outline-success' : 'btn-outline-danger');
+        } catch (e) {
+            icon.className = 'bi bi-x-circle text-danger';
+            this.title = 'Error: ' + e.message;
+        } finally {
+            this.disabled = false;
+        }
+    });
+});
+</script>
+}

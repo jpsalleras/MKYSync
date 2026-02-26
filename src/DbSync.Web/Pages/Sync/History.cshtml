@@ -1,0 +1,85 @@
+@page
+@model DbSync.Web.Pages.Sync.HistoryModel
+@{
+    ViewData["Title"] = "Historial de Sincronizaciones";
+}
+
+<h2><i class="bi bi-clock-history"></i> Historial de Sincronizaciones</h2>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Cliente</label>
+                <select name="clienteId" asp-items="Model.ClientesList" class="form-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Desde</label>
+                <input type="date" name="desde" value="@Model.Desde?.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Hasta</label>
+                <input type="date" name="hasta" value="@Model.Hasta?.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="soloErrores" class="form-select">
+                    <option value="false">Todos</option>
+                    <option value="true" selected="@Model.SoloErrores">Solo Errores</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-search-bar">
+            <span class="search-count" data-search-count="tblHistory">@Model.History.Count registros</span>
+            <input type="text" class="form-control form-control-sm" data-table-search="tblHistory" placeholder="Buscar..." />
+        </div>
+        <table id="tblHistory" class="table table-hover table-sm mb-0 sortable-table">
+            <thead class="table-light">
+                <tr>
+                    <th data-sort-type="date">Fecha</th>
+                    <th>Cliente</th>
+                    <th>Objeto</th>
+                    <th>Tipo</th>
+                    <th>Acción</th>
+                    <th>Dirección</th>
+                    <th>Estado</th>
+                    <th>Usuario</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var h in Model.History)
+                {
+                    <tr class="@(h.Exitoso ? "" : "table-danger")">
+                        <td>@h.FechaEjecucion.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@h.Cliente?.Codigo</td>
+                        <td><code>@h.NombreObjeto</code></td>
+                        <td><span class="badge bg-secondary">@h.TipoObjeto</span></td>
+                        <td><span class="badge @(h.AccionRealizada == "ERROR" ? "bg-danger" : "bg-info")">@h.AccionRealizada</span></td>
+                        <td>@h.AmbienteOrigen → @h.AmbienteDestino</td>
+                        <td>
+                            @if (h.Exitoso)
+                            {
+                                <i class="bi bi-check-circle text-success"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle text-danger" title="@h.Error"></i>
+                            }
+                        </td>
+                        <td>@h.Usuario</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

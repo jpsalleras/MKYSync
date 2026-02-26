@@ -1,0 +1,949 @@
+@page
+@model DbSync.Web.Pages.Compare.IndexModel
+@using DbSync.Core.Models
+@{
+    ViewData["Title"] = "Comparar Ambientes";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0"><i class="bi bi-file-diff"></i> Comparar</h2>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()">
+        <i class="bi bi-arrow-left"></i> Volver
+    </button>
+</div>
+
+<!-- Selector -->
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="btn-group btn-group-sm mb-2" role="group">
+            <input type="radio" class="btn-check" name="modoToggle" id="modoAmbiente" autocomplete="off"
+                   @(Model.Modo == "ambiente" ? "checked" : "") onchange="setModo('ambiente')">
+            <label class="btn btn-outline-primary" for="modoAmbiente">
+                <i class="bi bi-hdd-stack"></i> Ambiente vs Ambiente
+            </label>
+            <input type="radio" class="btn-check" name="modoToggle" id="modoVersion" autocomplete="off"
+                   @(Model.Modo == "version" ? "checked" : "") onchange="setModo('version')">
+            <label class="btn btn-outline-primary" for="modoVersion">
+                <i class="bi bi-tag"></i> Version Base vs Ambiente
+            </label>
+        </div>
+
+        <form method="get" id="compareForm">
+            <input type="hidden" name="modo" id="modoInput" value="@Model.Modo" />
+
+            <!-- Modo Ambiente -->
+            <div class="row g-2 align-items-end" id="selectorAmbiente" style="display:@(Model.Modo == "ambiente" ? "" : "none")">
+                <div class="col-md-4">
+                    <label class="form-label">Cliente</label>
+                    <select name="clienteId" asp-items="Model.ClientesList" class="form-select" id="selClienteAmb">
+                        <option value="">-- Seleccionar --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Origen</label>
+                    <select name="origen" class="form-select" id="selOrigen">
+                        <option value="DEV" selected="@(Model.Origen == "DEV")">DEV</option>
+                        <option value="QA" selected="@(Model.Origen == "QA")">QA</option>
+                        <option value="PR" selected="@(Model.Origen == "PR")">PR</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Destino</label>
+                    <select name="destino" class="form-select" id="selDestinoAmb">
+                        <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
+                        <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
+                        <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select" id="selTipoAmb">
+                        <option value="">Todos</option>
+                        <option value="SP" selected="@(Model.Tipo == "SP")">Stored Procedures</option>
+                        <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
+                        <option value="FN" selected="@(Model.Tipo == "FN")">Funciones</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100" data-loading="Comparando..." data-overlay>
+                        <i class="bi bi-search"></i> Comparar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modo Version -->
+            <div class="row g-2 align-items-end" id="selectorVersion" style="display:@(Model.Modo == "version" ? "" : "none")">
+                <div class="col-md-3">
+                    <label class="form-label">Version Base (Origen)</label>
+                    <select name="versionId" class="form-select" id="selVersionId">
+                        <option value="">-- Seleccionar version --</option>
+                        @foreach (var v in Model.VersionesList)
+                        {
+                            <option value="@v.Value" selected="@v.Selected">@v.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cliente (Destino)</label>
+                    <select name="clienteId" asp-items="Model.ClientesList" class="form-select" id="selClienteVer">
+                        <option value="">-- Seleccionar --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Ambiente Destino</label>
+                    <select name="destino" class="form-select" id="selDestinoVer">
+                        <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
+                        <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
+                        <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select" id="selTipoVer">
+                        <option value="">Todos</option>
+                        <option value="SP" selected="@(Model.Tipo == "SP")">Stored Procedures</option>
+                        <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
+                        <option value="FN" selected="@(Model.Tipo == "FN")">Funciones</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100" data-loading="Comparando..." data-overlay>
+                        <i class="bi bi-search"></i> Comparar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Error</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">@Model.ErrorMessage</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.SyncErrorMessage != null)
+{
+    <div class="modal fade" id="syncErrorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Error de Sincronizacion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">@Model.SyncErrorMessage</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ===== Resultados de sincronizacion ===== *@
+@if (Model.MostrarResultadosSync && Model.SyncResults.Any())
+{
+    var successCount = Model.SyncResults.Count(r => r.Success);
+    var errorCount = Model.SyncResults.Count(r => !r.Success);
+
+    <div class="card mb-3 @(errorCount > 0 ? "border-danger" : "border-success")">
+        <div class="card-header @(errorCount > 0 ? "bg-danger" : "bg-success") text-white d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi @(errorCount > 0 ? "bi-x-circle" : "bi-check-circle")"></i>
+                Resultado de Sincronizacion
+            </span>
+            <div>
+                <span class="badge bg-light text-success">@successCount exitosos</span>
+                @if (errorCount > 0)
+                {
+                    <span class="badge bg-light text-danger ms-1">@errorCount errores</span>
+                }
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px"></th>
+                        <th>Objeto</th>
+                        <th style="width:80px">Accion</th>
+                        <th>Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.SyncResults)
+                    {
+                        <tr class="@(r.Success ? "" : "table-danger")">
+                            <td class="text-center">
+                                @if (r.Success)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                }
+                            </td>
+                            <td><code>@r.ObjectFullName</code></td>
+                            <td><span class="badge @(r.Action == "ERROR" ? "bg-danger" : "bg-info")">@r.Action</span></td>
+                            <td class="small">@r.Message</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-end">
+            <a href="/Sync/History?clienteId=@Model.ClienteId" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-clock-history"></i> Ver Historial Completo
+            </a>
+            <a href="/Compare?clienteId=@Model.ClienteId&origen=@Model.Origen&destino=@Model.Destino&tipo=@Model.Tipo&modo=@Model.Modo@(Model.IsVersionMode ? $"&versionId={Model.VersionId}" : "")"
+               class="btn btn-primary btn-sm">
+                <i class="bi bi-arrow-repeat"></i> Comparar de Nuevo
+            </a>
+        </div>
+    </div>
+}
+
+@* ===== Preview de sincronizacion ===== *@
+@if (Model.MostrarPreviewSync && Model.PreviewSummary != null)
+{
+    <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-exclamation-triangle"></i> Preview de Sincronizacion - Confirmar antes de ejecutar</span>
+            <span class="badge bg-dark">@Model.PreviewSummary.Total objetos</span>
+        </div>
+        <div class="card-body">
+            <div class="mb-2">
+                @if (Model.PreviewSummary.TotalCreate > 0)
+                {
+                    <span class="badge bg-primary me-1">@Model.PreviewSummary.TotalCreate CREATE</span>
+                }
+                @if (Model.PreviewSummary.TotalAlter > 0)
+                {
+                    <span class="badge bg-warning text-dark me-1">@Model.PreviewSummary.TotalAlter ALTER</span>
+                }
+                @if (Model.PreviewSummary.TotalDrop > 0)
+                {
+                    <span class="badge bg-danger me-1">@Model.PreviewSummary.TotalDrop DROP</span>
+                }
+            </div>
+
+            @if (Model.IncludesDrops)
+            {
+                <div class="d-flex align-items-start gap-2 text-danger mb-2">
+                    <i class="bi bi-exclamation-octagon fs-5 mt-1"></i>
+                    <span><strong>ATENCION:</strong> La seleccion incluye @Model.PreviewSummary.TotalDrop objeto(s) que seran ELIMINADOS del destino.</span>
+                </div>
+            }
+            @if (Model.IncludesCustom)
+            {
+                <div class="d-flex align-items-start gap-2 text-warning mb-2">
+                    <i class="bi bi-exclamation-triangle fs-5 mt-1"></i>
+                    <span>La seleccion incluye @Model.PreviewSummary.TotalCustom objeto(s) custom. Proceda con precaucion.</span>
+                </div>
+            }
+
+            <div class="mb-2" style="max-height: calc(100vh - 450px); overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Objeto</th>
+                            <th style="width:100px">Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.PreviewSummary.Items)
+                        {
+                            var actionBadge = item.Action switch
+                            {
+                                "CREATE" => "bg-primary",
+                                "ALTER" => "bg-warning text-dark",
+                                "DROP" => "bg-danger",
+                                _ => "bg-secondary"
+                            };
+                            <tr class="@(item.IsCustom ? "table-warning" : "")">
+                                <td>
+                                    <code>@item.Name</code>
+                                    @if (item.IsCustom)
+                                    {
+                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.6rem">CUSTOM</span>
+                                    }
+                                </td>
+                                <td><span class="badge @actionBadge">@item.Action</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <details class="mb-3">
+                <summary class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-code-square"></i> Ver script SQL completo
+                </summary>
+                <div class="position-relative mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-1"
+                            onclick="copyScript(this)" title="Copiar al portapapeles">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <pre id="scriptPreviewCode" class="border rounded p-2 pe-5" style="max-height:300px; overflow:auto; font-size:0.75rem; background:#f8f9fa;">@Model.ScriptPreview</pre>
+                </div>
+            </details>
+
+            <div class="d-flex gap-2">
+                @if (Model.CanExecute)
+                {
+                    <form method="post" asp-page-handler="ExecuteSync" id="executeSyncForm">
+                        <input type="hidden" name="ClienteId" value="@Model.ClienteId" />
+                        <input type="hidden" name="Origen" value="@Model.Origen" />
+                        <input type="hidden" name="Destino" value="@Model.Destino" />
+                        <input type="hidden" name="Tipo" value="@Model.Tipo" />
+                        <input type="hidden" name="Modo" value="@Model.Modo" />
+                        @if (Model.IsVersionMode)
+                        {
+                            <input type="hidden" name="VersionId" value="@Model.VersionId" />
+                        }
+                        @foreach (var obj in Model.SelectedObjects)
+                        {
+                            <input type="hidden" name="SelectedObjects" value="@obj" />
+                        }
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmSyncModal">
+                            <i class="bi bi-play-fill"></i> Confirmar y Ejecutar
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <div class="alert alert-info py-2 px-3 mb-0">
+                        <i class="bi bi-lock"></i> No tiene permisos para ejecutar. Solicite el rol <strong>Ejecutar</strong> para sincronizar.
+                    </div>
+                }
+                <a href="/Compare?clienteId=@Model.ClienteId&origen=@Model.Origen&destino=@Model.Destino&tipo=@Model.Tipo&modo=@Model.Modo@(Model.IsVersionMode ? $"&versionId={Model.VersionId}" : "")"
+                   class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+            </div>
+
+    @if (Model.CanExecute)
+    {
+        <!-- Modal de confirmacion de sincronizacion -->
+        <div class="modal fade" id="confirmSyncModal" tabindex="-1" aria-labelledby="confirmSyncModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="confirmSyncModalLabel">
+                            <i class="bi bi-exclamation-triangle"></i> Confirmar Sincronizacion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Esta a punto de ejecutar la sincronizacion de <strong>@Model.PreviewSummary.Total objeto(s)</strong> de <strong>@Model.OrigenLabel</strong> a <strong>@Model.Destino</strong>.</p>
+                        @if (Model.IncludesDrops)
+                        {
+                            <div class="d-flex align-items-start gap-2 text-danger mb-2">
+                                <i class="bi bi-exclamation-octagon fs-5 mt-1"></i>
+                                <span>Se ELIMINARAN <strong>@Model.PreviewSummary.TotalDrop objeto(s)</strong> del destino.</span>
+                            </div>
+                        }
+                        @if (Model.IncludesCustom)
+                        {
+                            <div class="d-flex align-items-start gap-2 text-warning mb-2">
+                                <i class="bi bi-exclamation-triangle fs-5 mt-1"></i>
+                                <span>La seleccion incluye <strong>@Model.PreviewSummary.TotalCustom objeto(s) custom</strong>.</span>
+                            </div>
+                        }
+                        <p class="mb-0 text-muted"><small>Esta accion modifica la base de datos destino. Los cambios se ejecutan dentro de una transaccion.</small></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmSync" onclick="executeSync()">
+                            <i class="bi bi-play-fill"></i> Ejecutar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+        </div>
+    </div>
+}
+
+@if (Model.Summary != null && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync)
+{
+    <!-- Resumen -->
+    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+        <span class="badge bg-success stat-badge" role="button" onclick="filterStatus('Equal')">
+            @Model.Summary.TotalEqual Iguales
+        </span>
+        <span class="badge bg-warning text-dark stat-badge" role="button" onclick="filterStatus('Modified')">
+            @Model.Summary.TotalModified Modificados
+        </span>
+        <span class="badge bg-primary stat-badge" role="button" onclick="filterStatus('OnlyInSource')">
+            @Model.Summary.TotalOnlyInSource Solo @Model.OrigenLabel
+        </span>
+        <span class="badge bg-danger stat-badge" role="button" onclick="filterStatus('OnlyInTarget')">
+            @Model.Summary.TotalOnlyInTarget Solo @Model.Destino
+        </span>
+        <span class="badge stat-badge" style="background:#6f42c1" role="button" onclick="filterStatus('Custom')">
+            @Model.Summary.TotalCustom Custom
+        </span>
+        <span class="text-muted small ms-auto">
+            @Model.Summary.TotalObjects objetos en @Model.Summary.Duracion.TotalSeconds.ToString("F1")s
+        </span>
+    </div>
+
+    @* ===== Toolbar de sync + formulario oculto (solo DBA/Admin) ===== *@
+    @if (Model.CanSync && Model.Summary.HasDifferences && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync)
+    {
+        <form method="post" asp-page-handler="PreviewSync" id="syncForm">
+            <input type="hidden" name="ClienteId" value="@Model.ClienteId" />
+            <input type="hidden" name="Origen" value="@Model.Origen" />
+            <input type="hidden" name="Destino" value="@Model.Destino" />
+            <input type="hidden" name="Tipo" value="@Model.Tipo" />
+            <input type="hidden" name="Modo" value="@Model.Modo" />
+            @if (Model.IsVersionMode)
+            {
+                <input type="hidden" name="VersionId" value="@Model.VersionId" />
+            }
+            <div id="syncHiddenInputs"></div>
+        </form>
+
+        <div class="card mb-2 border-info" id="syncToolbar">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(true)">
+                        Seleccionar todos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(false)">
+                        Deseleccionar todos
+                    </button>
+                    <span class="text-muted small" id="syncSelectionCount"></span>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-warning btn-sm"
+                            data-loading="Generando preview..." data-overlay
+                            id="btnPreviewSync" onclick="submitSyncForm()">
+                        <i class="bi bi-arrow-right-circle"></i> Previsualizar (@Model.OrigenLabel &rarr; @Model.Destino)
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Lista de objetos + Splitter + Diff -->
+    <div class="split-container" id="splitContainer">
+        <div class="split-panel" id="objectListPanel" style="width:35%">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Objetos</span>
+                    <input type="text" id="searchBox" class="form-control form-control-sm w-50" placeholder="Buscar..." />
+                </div>
+                <div class="list-group list-group-flush" style="overflow-y: auto; flex: 1;">
+                    @{
+                        var showCheckboxes = Model.CanSync && Model.Summary.HasDifferences
+                            && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync;
+                    }
+                    @foreach (var result in Model.Summary.Results
+                        .Where(r => r.Status != CompareStatus.Equal)
+                        .OrderByDescending(r => r.Source?.LastModified ?? DateTime.MinValue))
+                    {
+                        var statusBadge = result.Status switch
+                        {
+                            CompareStatus.Modified => "badge-modified",
+                            CompareStatus.OnlyInSource => "badge-only-source",
+                            CompareStatus.OnlyInTarget => "badge-only-target",
+                            _ => ""
+                        };
+                        var statusText = result.Status switch
+                        {
+                            CompareStatus.Modified => "MOD",
+                            CompareStatus.OnlyInSource => $"SOLO {Model.OrigenLabel}",
+                            CompareStatus.OnlyInTarget => $"SOLO {Model.Destino}",
+                            _ => ""
+                        };
+
+                        <a href="#" class="list-group-item list-group-item-action object-row"
+                           data-status="@result.Status" data-name="@result.ObjectFullName"
+                           onclick="showDiff('@result.ObjectFullName'); return false;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    @if (showCheckboxes)
+                                    {
+                                        var isDisabled = result.IsCustom;
+                                        <input type="checkbox" class="form-check-input me-2 sync-checkbox"
+                                               data-object-name="@result.ObjectFullName"
+                                               @(isDisabled ? "disabled" : "")
+                                               onclick="event.stopPropagation(); updateSyncCount();" />
+                                    }
+                                    <code class="small">@result.ObjectFullName</code>
+                                    @if (result.IsCustom)
+                                    {
+                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.65rem">CUSTOM</span>
+                                    }
+                                </div>
+                                <div>
+                                    <span class="badge @statusBadge text-white">@statusText</span>
+                                    <span class="badge bg-light text-dark">@result.ObjectType.ToShortCode()</span>
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                @if (result.Source?.LastModified != default(DateTime) && result.Source?.LastModified != null)
+                                {
+                                    <i class="bi bi-clock"></i> @result.Source.LastModified.ToString("dd/MM/yyyy HH:mm")
+                                }
+                                @if (result.Status == CompareStatus.Modified)
+                                {
+                                    <text> &mdash; +@result.LinesAdded / -@result.LinesRemoved lineas</text>
+                                }
+                            </small>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="split-gutter" id="splitGutter"></div>
+
+        <div class="split-panel" id="diffPanel" style="flex:1">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center" id="diffHeader">
+                    <span id="diffTitle">Seleccione un objeto para ver el diff</span>
+                    <div class="d-flex align-items-center gap-2">
+                        @if (Model.MergeEnabled)
+                        {
+                            <button type="button" class="btn btn-sm btn-primary" id="btnSuggestMerge"
+                                    onclick="suggestMerge()" title="Sugerir merge con IA" style="display:none">
+                                <i class="bi bi-stars"></i> Sugerir Merge
+                            </button>
+                        }
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="btnPrevDiff" onclick="prevDiff()" title="Diferencia anterior" disabled>
+                                <i class="bi bi-chevron-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnDiffCount" disabled style="font-size:0.7rem;min-width:50px">
+                                0/0
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnNextDiff" onclick="nextDiff()" title="Diferencia siguiente" disabled>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnToggleExpand" onclick="toggleExpand()" title="Expandir/Contraer">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="diff-container" id="diffContainer" style="overflow: auto; flex: 1;">
+                    <p class="text-muted p-3">Haga clic en un objeto de la lista para ver las diferencias.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.MostrarResultadosSync)
+{
+    @* No mostrar nada extra *@
+}
+
+@* Modal de Sugerencia de Merge (IA) *@
+@if (Model.MergeEnabled)
+{
+    @Html.AntiForgeryToken()
+    <div class="modal fade" id="mergeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-stars"></i> Sugerencia de Merge (IA)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="mergeLoading" class="text-center p-4">
+                        <div class="spinner-border text-info" style="width:2rem;height:2rem"></div>
+                        <p class="mt-2 text-muted">Consultando a Claude... Esto puede tardar unos segundos.</p>
+                    </div>
+                    <div id="mergeError" class="alert alert-danger" style="display:none"></div>
+                    <div id="mergeResult" style="display:none">
+                        <div id="mergeExplanation" class="alert alert-info mb-3"></div>
+                        <div class="position-relative">
+                            <button type="button" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-2"
+                                    onclick="copyMergedSql(this)" title="Copiar al portapapeles">
+                                <i class="bi bi-clipboard"></i> Copiar SQL
+                            </button>
+                            <pre id="mergeSqlCode" class="merge-sql-code border rounded p-3 pe-5"></pre>
+                        </div>
+                        <div class="text-muted small mt-2" id="mergeTokenInfo"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    // Almacenar los diffs en un objeto JS para mostrar al hacer clic
+    var diffs = {};
+    @if (Model.Summary != null)
+    {
+        foreach (var result in Model.Summary.Results.Where(r => r.DiffHtml != null))
+        {
+            <text>diffs['@result.ObjectFullName'] = `@Html.Raw(result.DiffHtml?.Replace("`", "\\`").Replace("\\", "\\\\") ?? "")` ;</text>
+        }
+    }
+
+    function showDiff(objectName) {
+        document.getElementById('diffTitle').textContent = objectName;
+        var html = diffs[objectName];
+        if (html) {
+            document.getElementById('diffContainer').innerHTML = html;
+        } else {
+            document.getElementById('diffContainer').innerHTML = '<p class="text-muted p-3">Este objeto no tiene diff (solo existe en un ambiente).</p>';
+        }
+
+        // Marcar seleccionado
+        document.querySelectorAll('.object-row').forEach(r => r.classList.remove('selected'));
+        var selectedRow = document.querySelector('[data-name="' + objectName + '"]');
+        selectedRow?.classList.add('selected');
+
+        // Mostrar/ocultar botón Sugerir Merge (solo para objetos Modified)
+        var mergeBtn = document.getElementById('btnSuggestMerge');
+        if (mergeBtn) {
+            var isModified = selectedRow && selectedRow.dataset.status === 'Modified';
+            mergeBtn.style.display = isModified ? '' : 'none';
+        }
+
+        initDiffNav();
+    }
+
+    // --- Navegacion entre diferencias ---
+    var diffRows = [];
+    var diffIndex = -1;
+
+    function initDiffNav() {
+        var container = document.getElementById('diffContainer');
+        diffRows = container.querySelectorAll('.diff-deleted, .diff-inserted, .diff-modified');
+        diffIndex = -1;
+        updateDiffNavUI();
+        if (diffRows.length > 0) nextDiff();
+    }
+
+    function nextDiff() {
+        if (diffRows.length === 0) return;
+        diffIndex++;
+        if (diffIndex >= diffRows.length) diffIndex = 0;
+        scrollToDiff();
+    }
+
+    function prevDiff() {
+        if (diffRows.length === 0) return;
+        diffIndex--;
+        if (diffIndex < 0) diffIndex = diffRows.length - 1;
+        scrollToDiff();
+    }
+
+    function scrollToDiff() {
+        diffRows.forEach(function(r) { r.closest('tr')?.classList.remove('diff-highlight'); });
+        var row = diffRows[diffIndex];
+        var tr = row.closest('tr');
+        if (tr) {
+            tr.classList.add('diff-highlight');
+            tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+        updateDiffNavUI();
+    }
+
+    function updateDiffNavUI() {
+        var total = diffRows.length;
+        document.getElementById('btnPrevDiff').disabled = total === 0;
+        document.getElementById('btnNextDiff').disabled = total === 0;
+        document.getElementById('btnDiffCount').textContent = total > 0 ? (diffIndex + 1) + '/' + total : '0/0';
+    }
+
+    var expanded = false;
+    function toggleExpand() {
+        var listPanel = document.getElementById('objectListPanel');
+        var gutter = document.getElementById('splitGutter');
+        var splitContainer = document.getElementById('splitContainer');
+        var icon = document.querySelector('#btnToggleExpand i');
+        var filters = document.querySelector('.card.mb-3');
+        var stats = document.querySelectorAll('.row.g-2');
+        var summary = document.querySelector('p.text-muted');
+        var titleRow = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-2');
+        var syncToolbar = document.getElementById('syncToolbar');
+        expanded = !expanded;
+        if (expanded) {
+            listPanel.style.display = 'none';
+            gutter.style.display = 'none';
+            icon.className = 'bi bi-arrows-angle-contract';
+            if (filters) filters.style.display = 'none';
+            stats.forEach(function(s) { s.style.display = 'none'; });
+            if (summary) summary.style.display = 'none';
+            if (titleRow) titleRow.style.display = 'none';
+            if (syncToolbar) syncToolbar.style.display = 'none';
+            splitContainer.style.height = 'calc(100vh - 80px)';
+        } else {
+            listPanel.style.display = '';
+            gutter.style.display = '';
+            icon.className = 'bi bi-arrows-fullscreen';
+            if (filters) filters.style.display = '';
+            stats.forEach(function(s) { s.style.display = ''; });
+            if (summary) summary.style.display = '';
+            if (titleRow) titleRow.style.display = '';
+            if (syncToolbar) syncToolbar.style.display = '';
+            splitContainer.style.height = '';
+        }
+    }
+
+    function filterStatus(status) {
+        document.querySelectorAll('.object-row').forEach(row => {
+            if (status === 'Custom') {
+                row.style.display = row.querySelector('.badge-custom') ? '' : 'none';
+            } else {
+                row.style.display = (row.dataset.status === status || status === '') ? '' : 'none';
+            }
+        });
+        updateSyncCount();
+    }
+
+    // Busqueda
+    document.getElementById('searchBox')?.addEventListener('input', function(e) {
+        var term = e.target.value.toLowerCase();
+        document.querySelectorAll('.object-row').forEach(row => {
+            row.style.display = row.dataset.name.toLowerCase().includes(term) ? '' : 'none';
+        });
+        updateSyncCount();
+    });
+
+    // Splitter drag
+    (function() {
+        var gutter = document.getElementById('splitGutter');
+        var container = document.getElementById('splitContainer');
+        var leftPanel = document.getElementById('objectListPanel');
+        if (!gutter || !container || !leftPanel) return;
+        var dragging = false;
+        gutter.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            dragging = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            var rect = container.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var pct = (x / rect.width) * 100;
+            if (pct < 15) pct = 15;
+            if (pct > 70) pct = 70;
+            leftPanel.style.width = pct + '%';
+        });
+        document.addEventListener('mouseup', function() {
+            if (dragging) {
+                dragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    })();
+
+    // --- Sync checkbox management ---
+    function updateSyncCount() {
+        var checkboxes = document.querySelectorAll('.sync-checkbox:not(:disabled)');
+        if (checkboxes.length === 0) return;
+        var checked = 0;
+        var total = 0;
+        checkboxes.forEach(function(cb) {
+            var row = cb.closest('.object-row');
+            if (row && row.style.display !== 'none') {
+                total++;
+                if (cb.checked) checked++;
+            }
+        });
+        var el = document.getElementById('syncSelectionCount');
+        if (el) el.textContent = checked + ' de ' + total + ' seleccionados';
+
+        var btn = document.getElementById('btnPreviewSync');
+        if (btn) btn.disabled = checked === 0;
+    }
+
+    function selectAllSync(select) {
+        document.querySelectorAll('.sync-checkbox:not(:disabled)').forEach(function(cb) {
+            var row = cb.closest('.object-row');
+            if (row && row.style.display !== 'none') {
+                cb.checked = select;
+            }
+        });
+        updateSyncCount();
+    }
+
+    function copyScript(btn) {
+        var text = document.getElementById('scriptPreviewCode')?.textContent || '';
+        navigator.clipboard.writeText(text).then(function() {
+            var icon = btn.querySelector('i');
+            icon.className = 'bi bi-clipboard-check';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(function() {
+                icon.className = 'bi bi-clipboard';
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    }
+
+    function submitSyncForm() {
+        // Collect checked checkboxes and add as hidden inputs to the form
+        var container = document.getElementById('syncHiddenInputs');
+        if (!container) return;
+        container.innerHTML = '';
+
+        document.querySelectorAll('.sync-checkbox:checked:not(:disabled)').forEach(function(cb) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'SelectedObjects';
+            input.value = cb.dataset.objectName;
+            container.appendChild(input);
+        });
+
+        var form = document.getElementById('syncForm');
+        if (form) form.submit();
+    }
+
+    function executeSync() {
+        // Close modal, show overlay, submit form
+        var modal = bootstrap.Modal.getInstance(document.getElementById('confirmSyncModal'));
+        if (modal) modal.hide();
+
+        // Show loading overlay
+        var overlay = document.getElementById('spinnerOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'spinnerOverlay';
+            overlay.className = 'spinner-overlay';
+            overlay.innerHTML = '<div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>' +
+                '<div class="spinner-text">Ejecutando sincronizacion...</div>';
+            document.body.appendChild(overlay);
+        } else {
+            var textEl = overlay.querySelector('.spinner-text');
+            if (textEl) textEl.textContent = 'Ejecutando sincronizacion...';
+        }
+        overlay.classList.add('active');
+
+        // Submit form after modal closes
+        setTimeout(function() {
+            var form = document.getElementById('executeSyncForm');
+            if (form) form.submit();
+        }, 300);
+    }
+
+    // Init on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filtrar por Modified por defecto si hay resultados
+        if (document.querySelectorAll('.object-row').length > 0) {
+            filterStatus('Modified');
+        }
+        updateSyncCount();
+
+        // Auto-show error modals
+        var errorModal = document.getElementById('errorModal');
+        if (errorModal) new bootstrap.Modal(errorModal).show();
+
+        var syncErrorModal = document.getElementById('syncErrorModal');
+        if (syncErrorModal) new bootstrap.Modal(syncErrorModal).show();
+    });
+
+    // --- Mode toggle ---
+    function setModo(modo) {
+        document.getElementById('modoInput').value = modo;
+        document.getElementById('selectorAmbiente').style.display = modo === 'ambiente' ? '' : 'none';
+        document.getElementById('selectorVersion').style.display = modo === 'version' ? '' : 'none';
+        // Disable inputs in hidden panel to avoid duplicate name submission
+        document.querySelectorAll('#selectorAmbiente select').forEach(s => s.disabled = modo !== 'ambiente');
+        document.querySelectorAll('#selectorVersion select').forEach(s => s.disabled = modo !== 'version');
+    }
+    // Init on load
+    setModo('@Model.Modo');
+
+    // --- Sugerir Merge (IA) ---
+    function suggestMerge() {
+        var objectName = document.getElementById('diffTitle').textContent;
+        if (!objectName || objectName === 'Seleccione un objeto para ver el diff') return;
+
+        var modal = new bootstrap.Modal(document.getElementById('mergeModal'));
+        document.getElementById('mergeLoading').style.display = '';
+        document.getElementById('mergeError').style.display = 'none';
+        document.getElementById('mergeResult').style.display = 'none';
+        modal.show();
+
+        var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        var params = new URLSearchParams();
+        params.append('clienteId', '@(Model.ClienteId ?? 0)');
+        params.append('origen', '@Model.Origen');
+        params.append('destino', '@Model.Destino');
+        params.append('objectName', objectName);
+        params.append('modo', '@Model.Modo');
+        @if (Model.IsVersionMode && Model.VersionId.HasValue)
+        {
+            <text>params.append('versionId', '@Model.VersionId');</text>
+        }
+
+        fetch('/Compare?handler=SuggestMerge', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: params.toString()
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            document.getElementById('mergeLoading').style.display = 'none';
+
+            if (data.error) {
+                document.getElementById('mergeError').textContent = data.error;
+                document.getElementById('mergeError').style.display = '';
+                return;
+            }
+
+            document.getElementById('mergeExplanation').textContent = data.explanation || '';
+            document.getElementById('mergeExplanation').style.display = data.explanation ? '' : 'none';
+            document.getElementById('mergeSqlCode').textContent = data.mergedSql || '';
+            document.getElementById('mergeTokenInfo').textContent =
+                'Modelo: ' + (data.model || '') +
+                ' | Tokens: ' + (data.inputTokens || 0) + ' entrada + ' +
+                (data.outputTokens || 0) + ' salida';
+            document.getElementById('mergeResult').style.display = '';
+        })
+        .catch(function(err) {
+            document.getElementById('mergeLoading').style.display = 'none';
+            document.getElementById('mergeError').textContent = 'Error de conexion: ' + err.message;
+            document.getElementById('mergeError').style.display = '';
+        });
+    }
+
+    function copyMergedSql(btn) {
+        var text = document.getElementById('mergeSqlCode')?.textContent || '';
+        navigator.clipboard.writeText(text).then(function() {
+            var icon = btn.querySelector('i');
+            icon.className = 'bi bi-clipboard-check';
+            btn.classList.replace('btn-outline-light', 'btn-success');
+            setTimeout(function() {
+                icon.className = 'bi bi-clipboard';
+                btn.classList.replace('btn-success', 'btn-outline-light');
+            }, 2000);
+        });
+    }
+</script>
+}

@@ -1,0 +1,244 @@
+@page
+@model DbSync.Web.Pages.Scanner.LogDetailModel
+@{
+    ViewData["Title"] = $"Scan #{Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-journal-text"></i> Scan #@Model.Id</h3>
+    <a href="/Scanner/Logs" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+@if (Model.ScanLog != null)
+{
+    var scan = Model.ScanLog;
+    var statusClass = scan.Status switch
+    {
+        DbSync.Core.Models.ScanStatus.Completed => "success",
+        DbSync.Core.Models.ScanStatus.CompletedWithErrors => "warning",
+        DbSync.Core.Models.ScanStatus.Running => "info",
+        _ => "danger"
+    };
+
+    <!-- Resumen -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <span class="badge bg-@statusClass fs-6">@scan.Status</span>
+                    <div class="mt-2">
+                        <small class="text-muted">@scan.Trigger</small>
+                        @if (!string.IsNullOrEmpty(scan.TriggeredBy))
+                        {
+                            <br/><small class="text-muted">por @scan.TriggeredBy</small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number">@scan.TotalClientes</div>
+                    <small class="text-muted">Clientes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number">@scan.TotalObjectsScanned</div>
+                    <small class="text-muted">Objetos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-primary">@scan.TotalChangesDetected</div>
+                    <small class="text-muted">Cambios</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-danger">@scan.TotalErrors</div>
+                    <small class="text-muted">Errores</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    @if (scan.CompletedAt.HasValue)
+                    {
+                        <div class="stat-number">@((scan.CompletedAt.Value - scan.StartedAt).TotalSeconds.ToString("F0"))s</div>
+                    }
+                    else
+                    {
+                        <div class="stat-number">...</div>
+                    }
+                    <small class="text-muted">Duracion</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><strong>Inicio:</strong> @scan.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+        <div class="col-md-3"><strong>Fin:</strong> @(scan.CompletedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "En progreso...")</div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(scan.ErrorSummary))
+    {
+        <div class="alert alert-danger">
+            <strong>Errores:</strong><br/>
+            <pre class="mb-0" style="white-space: pre-wrap;">@scan.ErrorSummary</pre>
+        </div>
+    }
+
+    <!-- Detalle por Cliente/Ambiente -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-list-check"></i> Detalle por Cliente / Ambiente (@Model.Entries.Count entries)
+        </div>
+        <div class="card-body p-0">
+            <div class="table-search-bar">
+                <span class="search-count" data-search-count="tblEntries">@Model.Entries.Count registros</span>
+                <input type="text" class="form-control form-control-sm" data-table-search="tblEntries" placeholder="Buscar..." />
+            </div>
+            <div class="table-responsive">
+                <table id="tblEntries" class="table table-sm table-hover mb-0 sortable-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Ambiente</th>
+                            <th>Estado</th>
+                            <th data-sort-type="number">Objetos</th>
+                            <th data-sort-type="number">Nuevos</th>
+                            <th data-sort-type="number">Modificados</th>
+                            <th data-sort-type="number">Eliminados</th>
+                            <th>Duracion</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Entries)
+                        {
+                            <tr class="@(!entry.Success ? "table-danger" : "")">
+                                <td><code>@entry.ClienteCodigo</code></td>
+                                <td><span class="badge bg-secondary">@entry.Ambiente</span></td>
+                                <td>
+                                    @if (entry.Success)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-danger"></i>
+                                    }
+                                </td>
+                                <td>@entry.ObjectsFound</td>
+                                <td>
+                                    @if (entry.ObjectsNew > 0)
+                                    {
+                                        <span class="text-success">+@entry.ObjectsNew</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (entry.ObjectsModified > 0)
+                                    {
+                                        <span class="text-warning fw-bold">@entry.ObjectsModified</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (entry.ObjectsDeleted > 0)
+                                    {
+                                        <span class="text-danger">-@entry.ObjectsDeleted</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td><small>@entry.DurationSeconds.ToString("F1")s</small></td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(entry.ErrorMessage))
+                                    {
+                                        <small class="text-danger" title="@entry.ErrorMessage">
+                                            @(entry.ErrorMessage.Length > 60 ? entry.ErrorMessage[..60] + "..." : entry.ErrorMessage)
+                                        </small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambios Detectados -->
+    @if (Model.Changes.Count > 0)
+    {
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bell"></i> Cambios Detectados (@Model.Changes.Count)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-search-bar">
+                    <span class="search-count" data-search-count="tblChanges">@Model.Changes.Count registros</span>
+                    <input type="text" class="form-control form-control-sm" data-table-search="tblChanges" placeholder="Buscar..." />
+                </div>
+                <div class="table-responsive">
+                    <table id="tblChanges" class="table table-sm table-hover mb-0 sortable-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Ambiente</th>
+                                <th>Objeto</th>
+                                <th>Tipo</th>
+                                <th>Cambio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var change in Model.Changes)
+                            {
+                                var changeClass = change.ChangeType switch
+                                {
+                                    DbSync.Core.Models.ObjectChangeType.Created => "success",
+                                    DbSync.Core.Models.ObjectChangeType.Modified => "warning",
+                                    DbSync.Core.Models.ObjectChangeType.Deleted => "danger",
+                                    _ => "secondary"
+                                };
+                                <tr>
+                                    <td><code>@change.ClienteCodigo</code></td>
+                                    <td><span class="badge bg-secondary">@change.Ambiente</span></td>
+                                    <td><code>@change.ObjectFullName</code></td>
+                                    <td><small>@change.ObjectType</small></td>
+                                    <td><span class="badge bg-@changeClass">@change.ChangeType</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}

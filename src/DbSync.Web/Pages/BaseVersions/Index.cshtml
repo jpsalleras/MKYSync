@@ -1,0 +1,227 @@
+@page
+@model DbSync.Web.Pages.BaseVersions.IndexModel
+@{
+    ViewData["Title"] = "Versiones Base";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2><i class="bi bi-tag"></i> Versiones Base</h2>
+        <p class="text-muted mb-0">Snapshots globales de objetos base por version del software. Total: <strong>@Model.Versions.Count</strong> versiones</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Mensaje))
+{
+    <div class="alert @(Model.MensajeExito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+        @Model.Mensaje
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (User.IsInRole("Admin") || User.IsInRole("DBA"))
+{
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> Crear Version Base desde Snapshot</div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="Create">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small">Nombre Version</label>
+                        <input asp-for="NuevoNombre" class="form-control form-control-sm"
+                               placeholder="5.8.5" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Descripcion (opcional)</label>
+                        <input asp-for="NuevaDescripcion" class="form-control form-control-sm"
+                               placeholder="Release Q1 2026" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Cliente Origen</label>
+                        <select asp-for="NuevoClienteId" asp-items="Model.ClientesList" class="form-select form-select-sm">
+                            <option value="">-- Seleccionar --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Ambiente Origen</label>
+                        <select asp-for="NuevoAmbiente" class="form-select form-select-sm">
+                            <option value="DEV">DEV</option>
+                            <option value="QA">QA</option>
+                            <option value="PR" selected>PR</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" data-loading="Creando version..." data-overlay>
+                            <i class="bi bi-tag"></i> Crear Version
+                        </button>
+                    </div>
+                </div>
+                <div class="form-text mt-1">
+                    Se copian los snapshots actuales (solo objetos base, no custom) del cliente/ambiente seleccionado.
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.Versions.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-tag" style="font-size: 3rem;"></i>
+        <p class="mt-2">No hay versiones base registradas.</p>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Version</th>
+                        <th>Descripcion</th>
+                        <th>Origen</th>
+                        <th class="text-center">Objetos</th>
+                        <th>Fecha Creacion</th>
+                        <th>Creado por</th>
+                        <th style="width:100px" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in Model.Versions)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@v.VersionName</strong>
+                            </td>
+                            <td class="text-muted">@(v.Description ?? "-")</td>
+                            <td>
+                                <span class="badge bg-secondary">@v.SourceClienteCodigo</span>
+                                <span class="badge bg-info text-dark">@v.SourceAmbiente</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">@v.TotalObjects</span>
+                            </td>
+                            <td>@v.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-muted">@(v.CreatedBy ?? "-")</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-info btn-sm" title="Ver objetos"
+                                        onclick="showDetail(@v.Id, '@v.VersionName')">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                                @if (User.IsInRole("Admin") || User.IsInRole("DBA"))
+                                {
+                                    <form method="post" asp-page-handler="Delete" class="d-inline"
+                                          onsubmit="return confirm('Eliminar version @v.VersionName? Esta accion no se puede deshacer.')">
+                                        <input type="hidden" name="id" value="@v.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- Modal detalle de objetos -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-list-ul"></i> Objetos de version <span id="detailVersionName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Cargando objetos...</p>
+                </div>
+                <div id="detailContent" style="display:none">
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm" id="detailFilter"
+                               placeholder="Filtrar objetos..." oninput="filterDetail()">
+                    </div>
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Schema</th>
+                                <th>Nombre</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTable"></tbody>
+                    </table>
+                </div>
+                <div id="detailError" class="alert alert-danger" style="display:none"></div>
+            </div>
+            <div class="modal-footer">
+                <span id="detailCount" class="text-muted me-auto"></span>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let detailData = [];
+
+    async function showDetail(id, versionName) {
+        document.getElementById('detailVersionName').textContent = versionName;
+        document.getElementById('detailLoading').style.display = '';
+        document.getElementById('detailContent').style.display = 'none';
+        document.getElementById('detailError').style.display = 'none';
+        document.getElementById('detailFilter').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        modal.show();
+
+        try {
+            const resp = await fetch(`/BaseVersions?handler=Detail&id=${id}`);
+            const data = await resp.json();
+            detailData = data;
+            renderDetail(data);
+        } catch (err) {
+            document.getElementById('detailLoading').style.display = 'none';
+            document.getElementById('detailError').style.display = '';
+            document.getElementById('detailError').textContent = 'Error cargando objetos: ' + err.message;
+        }
+    }
+
+    function renderDetail(data) {
+        document.getElementById('detailLoading').style.display = 'none';
+        document.getElementById('detailContent').style.display = '';
+
+        const typeLabels = { 'P': 'SP', 'V': 'VIEW', 'FN': 'FN', 'TF': 'TF', 'IF': 'IF' };
+        const typeColors = { 'P': 'primary', 'V': 'success', 'FN': 'warning', 'TF': 'warning', 'IF': 'warning' };
+
+        let html = '';
+        data.forEach(obj => {
+            const label = typeLabels[obj.objectType] || obj.objectType;
+            const color = typeColors[obj.objectType] || 'secondary';
+            html += `<tr class="detail-row">
+                <td><span class="badge bg-${color}">${label}</span></td>
+                <td>${obj.schemaName}</td>
+                <td>${obj.objectName}</td>
+            </tr>`;
+        });
+
+        document.getElementById('detailTable').innerHTML = html;
+        document.getElementById('detailCount').textContent = `${data.length} objetos`;
+    }
+
+    function filterDetail() {
+        const filter = document.getElementById('detailFilter').value.toLowerCase();
+        const filtered = detailData.filter(o =>
+            o.objectFullName.toLowerCase().includes(filter) ||
+            o.objectType.toLowerCase().includes(filter)
+        );
+        renderDetail(filtered);
+    }
+</script>
+}

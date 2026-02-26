@@ -1,0 +1,210 @@
+@page
+@model DbSync.Web.Pages.Scanner.IndexModel
+@{
+    ViewData["Title"] = "Scanner";
+}
+
+<h3><i class="bi bi-radar"></i> Scanner Central</h3>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Acciones -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-play-circle"></i> Ejecutar Scan</h5>
+                <div class="d-flex gap-2 align-items-end">
+                    <form method="post" asp-page-handler="TriggerFullScan" class="d-inline">
+                        <button type="submit" class="btn btn-primary" data-loading="Ejecutando scan completo..." data-overlay>
+                            <i class="bi bi-arrow-repeat"></i> Scan Completo
+                        </button>
+                    </form>
+
+                    <form method="post" asp-page-handler="TriggerClientScan" class="d-inline-flex gap-2">
+                        <select name="clienteId" class="form-select form-select-sm" style="width:200px" required>
+                            <option value="">-- Cliente --</option>
+                            @foreach (var c in Model.ClientesList)
+                            {
+                                <option value="@c.Value">@c.Text</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary btn-sm" data-loading="Escaneando..." data-overlay>
+                            <i class="bi bi-play"></i> Scan Individual
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ultimo Scan -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-info-circle"></i> Ultimo Scan</h5>
+                @if (Model.LatestScan != null)
+                {
+                    var scan = Model.LatestScan;
+                    var statusClass = scan.Status switch
+                    {
+                        DbSync.Core.Models.ScanStatus.Completed => "success",
+                        DbSync.Core.Models.ScanStatus.CompletedWithErrors => "warning",
+                        DbSync.Core.Models.ScanStatus.Running => "info",
+                        _ => "danger"
+                    };
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-@statusClass">@scan.Status</span>
+                        <small class="text-muted">@scan.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="fw-bold">@scan.TotalObjectsScanned</div>
+                            <small class="text-muted">Objetos</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="fw-bold text-primary">@scan.TotalChangesDetected</div>
+                            <small class="text-muted">Cambios</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="fw-bold text-danger">@scan.TotalErrors</div>
+                            <small class="text-muted">Errores</small>
+                        </div>
+                        <div class="col-3">
+                            @if (scan.CompletedAt.HasValue)
+                            {
+                                <div class="fw-bold">@((scan.CompletedAt.Value - scan.StartedAt).TotalSeconds.ToString("F0"))s</div>
+                                <small class="text-muted">Duracion</small>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="/Scanner/LogDetail?id=@scan.Id" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-eye"></i> Ver Detalle
+                        </a>
+                        <a href="/Scanner/Logs" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-journal-text"></i> Ver Todos
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">No se han ejecutado scans aun.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notificaciones SMTP -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-envelope"></i> <strong>Notificaciones SMTP:</strong>
+                    @if (Model.SmtpEnabled)
+                    {
+                        <span class="badge bg-success">Habilitado</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Deshabilitado</span>
+                    }
+                    @if (Model.PendingNotifications > 0)
+                    {
+                        <span class="badge bg-warning ms-2">@Model.PendingNotifications pendientes</span>
+                    }
+                </div>
+                <form method="post" asp-page-handler="TestEmail" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-info" @(Model.SmtpEnabled ? "" : "disabled") data-loading="Enviando...">
+                        <i class="bi bi-send"></i> Enviar Email de Prueba
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cambios Recientes -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-bell"></i> Cambios Detectados Recientes</span>
+        <span class="badge bg-primary">@Model.RecentChanges.Count</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.RecentChanges.Count > 0)
+        {
+            <div class="table-search-bar">
+                <span class="search-count" data-search-count="tblScannerChanges">@Model.RecentChanges.Count registros</span>
+                <input type="text" class="form-control form-control-sm" data-table-search="tblScannerChanges" placeholder="Buscar..." />
+            </div>
+            <div class="table-responsive">
+                <table id="tblScannerChanges" class="table table-sm table-hover mb-0 sortable-table">
+                    <thead>
+                        <tr>
+                            <th data-sort-type="date">Fecha</th>
+                            <th>Cliente</th>
+                            <th>Ambiente</th>
+                            <th>Objeto</th>
+                            <th>Tipo</th>
+                            <th>Cambio</th>
+                            <th>Notif.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var change in Model.RecentChanges)
+                        {
+                            var changeClass = change.ChangeType switch
+                            {
+                                DbSync.Core.Models.ObjectChangeType.Created => "success",
+                                DbSync.Core.Models.ObjectChangeType.Modified => "warning",
+                                DbSync.Core.Models.ObjectChangeType.Deleted => "danger",
+                                _ => "secondary"
+                            };
+                            var changeIcon = change.ChangeType switch
+                            {
+                                DbSync.Core.Models.ObjectChangeType.Created => "plus-circle",
+                                DbSync.Core.Models.ObjectChangeType.Modified => "pencil",
+                                DbSync.Core.Models.ObjectChangeType.Deleted => "trash",
+                                _ => "question-circle"
+                            };
+                            <tr>
+                                <td><small>@change.DetectedAt.ToLocalTime().ToString("dd/MM HH:mm")</small></td>
+                                <td><code>@change.ClienteCodigo</code></td>
+                                <td><span class="badge bg-secondary">@change.Ambiente</span></td>
+                                <td><code>@change.ObjectFullName</code></td>
+                                <td><small>@change.ObjectType</small></td>
+                                <td>
+                                    <span class="badge bg-@changeClass">
+                                        <i class="bi bi-@changeIcon"></i> @change.ChangeType
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (change.NotificationSent)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success" title="Notificado"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-clock text-muted" title="Pendiente"></i>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted p-3 mb-0">No se han detectado cambios aun.</p>
+        }
+    </div>
+</div>

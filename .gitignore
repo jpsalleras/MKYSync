@@ -1,0 +1,56 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Bb]uild[Ll]og.*
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+**/packages/repositories.config
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET
+ScaffoldingReadMe.txt
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# User-specific files
+*.user
+*.suo
+*.cache
+*.docuser
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# dotnet tool
+.dotnet/
+
+# Publish output
+publish/

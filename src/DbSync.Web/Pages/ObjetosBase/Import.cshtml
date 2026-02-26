@@ -1,0 +1,223 @@
+@page
+@model DbSync.Web.Pages.ObjetosBase.ImportModel
+@{
+    ViewData["Title"] = "Importar Objetos Base";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-download"></i> Importar Objetos Base</h2>
+    <a href="/ObjetosBase" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Mensaje))
+{
+    <div class="alert @(Model.MensajeExito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+        @Model.Mensaje
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Paso 1: Seleccionar cliente y ambiente -->
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-1-circle"></i> Seleccionar origen</div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Preview">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">Cliente</label>
+                    <select name="clienteId" class="form-select" id="importCliente">
+                        <option value="">-- Seleccionar cliente --</option>
+                        @foreach (var c in Model.Clientes)
+                        {
+                            var selCliente = Model.ClienteSeleccionado?.Id == c.Id ? "selected" : "";
+                            <option value="@c.Id"
+                                    data-ambientes="@string.Join(",", c.Ambientes.Select(a => a.Ambiente))"
+                                    selected="@(selCliente == "selected" ? "selected" : null)">
+                                @c.Nombre (@c.Codigo)
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ambiente</label>
+                    <select name="ambiente" class="form-select" id="importAmbiente">
+                        <option value="">-- Ambiente --</option>
+                        @if (Model.ClienteSeleccionado != null)
+                        {
+                            @foreach (var amb in Model.ClienteSeleccionado.Ambientes)
+                            {
+                                var selAmb = Model.AmbienteSeleccionado == amb.Ambiente.ToString();
+                                <option value="@amb.Ambiente"
+                                        selected="@(selAmb ? "selected" : null)">
+                                    @amb.Ambiente
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100" data-loading="Conectando..." data-overlay>
+                        <i class="bi bi-search"></i> Buscar Objetos
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Paso 2: Preview y seleccion -->
+@if (Model.MostrarPreview && Model.ClienteSeleccionado != null)
+{
+    var yaExisteComoBase = Model.ObjetosPreview.Where(o => o.YaExisteComoBase).Count();
+    var visibles = Model.ObjetosPreview.Where(o => !o.YaExisteComoBase).ToList();
+    var disponibles = visibles.Where(o => !o.IsCustom).ToList();
+    var custom = visibles.Where(o => o.IsCustom).ToList();
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-2-circle"></i> Objetos encontrados en
+            <strong>@Model.ClienteSeleccionado.Codigo / @Model.AmbienteSeleccionado</strong>
+            <span class="badge bg-secondary ms-2">@Model.ObjetosPreview.Count en BD</span>
+            <span class="badge bg-primary ms-1">@disponibles.Count disponibles</span>
+            @if (yaExisteComoBase > 0)
+            {
+                <span class="badge bg-info ms-1">@yaExisteComoBase ya en objetos base (ocultos)</span>
+            }
+            @if (custom.Any())
+            {
+                <span class="badge bg-warning text-dark ms-1">@custom.Count custom</span>
+            }
+        </div>
+        <div class="card-body p-0">
+            <form method="post" asp-page-handler="Import">
+                <input type="hidden" name="clienteId" value="@Model.ClienteSeleccionado.Id" />
+                <input type="hidden" name="ambiente" value="@Model.AmbienteSeleccionado" />
+
+                <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSelectAll">
+                            Seleccionar todos
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDeselectAll">
+                            Deseleccionar todos
+                        </button>
+                        <span class="text-muted small" id="selectionCount"></span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" class="form-control form-control-sm" style="width:220px"
+                               data-table-search="tblImport" placeholder="Buscar..." />
+                        <button type="submit" class="btn btn-success btn-sm text-nowrap"
+                                onclick="return confirm('¿Importar los objetos seleccionados como objetos base de @Model.ClienteSeleccionado.Codigo?')"
+                                data-loading="Importando...">
+                            <i class="bi bi-download"></i> Importar Seleccionados
+                        </button>
+                    </div>
+                </div>
+
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table id="tblImport" class="table table-hover table-sm mb-0 sortable-table">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 40px" data-no-sort></th>
+                                <th style="width: 70px">Tipo</th>
+                                <th>Nombre Objeto</th>
+                                <th style="width: 150px">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var obj in visibles)
+                            {
+                                var badgeClass = obj.TipoObjeto switch
+                                {
+                                    "SP" => "bg-primary",
+                                    "VIEW" => "bg-info",
+                                    "FN" => "bg-success",
+                                    _ => "bg-secondary"
+                                };
+
+                                var rowClass = obj.IsCustom ? "table-light text-muted" : "";
+
+                                <tr class="@rowClass">
+                                    <td class="text-center">
+                                        @if (!obj.IsCustom)
+                                        {
+                                            <input type="checkbox" class="form-check-input obj-checkbox"
+                                                   name="selectedObjects"
+                                                   value="@obj.TipoObjeto|@obj.FullName"
+                                                   @(obj.Seleccionado ? "checked" : "") />
+                                        }
+                                    </td>
+                                    <td><span class="badge @badgeClass">@obj.TipoObjeto</span></td>
+                                    <td><code>@obj.FullName</code></td>
+                                    <td>
+                                        @if (obj.IsCustom)
+                                        {
+                                            <span class="badge bg-warning text-dark">Custom</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+// Cargar ambientes al cambiar cliente (solo si no hay preview)
+document.getElementById('importCliente')?.addEventListener('change', function() {
+    const sel = this.options[this.selectedIndex];
+    const ambientes = sel.dataset.ambientes || '';
+    const ambSelect = document.getElementById('importAmbiente');
+    ambSelect.innerHTML = '<option value="">-- Ambiente --</option>';
+    if (ambientes) {
+        ambientes.split(',').forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a;
+            opt.textContent = a;
+            ambSelect.appendChild(opt);
+        });
+    }
+});
+
+// Select all / deselect all (only visible rows when searching)
+function getVisibleCheckboxes() {
+    return Array.from(document.querySelectorAll('.obj-checkbox')).filter(function(cb) {
+        return cb.closest('tr').style.display !== 'none';
+    });
+}
+
+function updateCount() {
+    var visible = getVisibleCheckboxes();
+    var checked = visible.filter(function(cb) { return cb.checked; }).length;
+    var total = visible.length;
+    var el = document.getElementById('selectionCount');
+    if (el) el.textContent = checked + ' de ' + total + ' seleccionados';
+}
+
+document.getElementById('btnSelectAll')?.addEventListener('click', function() {
+    getVisibleCheckboxes().forEach(function(cb) { cb.checked = true; });
+    updateCount();
+});
+
+document.getElementById('btnDeselectAll')?.addEventListener('click', function() {
+    getVisibleCheckboxes().forEach(function(cb) { cb.checked = false; });
+    updateCount();
+});
+
+document.querySelectorAll('.obj-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', updateCount);
+});
+
+// Update count when table is filtered by search
+var tblImport = document.getElementById('tblImport');
+if (tblImport) tblImport.addEventListener('table-filtered', updateCount);
+
+updateCount();
+</script>
+}

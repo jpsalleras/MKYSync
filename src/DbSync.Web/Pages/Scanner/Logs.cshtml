@@ -1,0 +1,99 @@
+@page
+@model DbSync.Web.Pages.Scanner.LogsModel
+@{
+    ViewData["Title"] = "Scan Logs";
+}
+
+<h3><i class="bi bi-journal-text"></i> Scan Logs</h3>
+
+<div class="card">
+    <div class="card-header">
+        <span>Ultimos 50 scans ejecutados</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.ScanLogs.Count > 0)
+        {
+            <div class="table-search-bar">
+                <span class="search-count" data-search-count="tblScanLogs">@Model.ScanLogs.Count registros</span>
+                <input type="text" class="form-control form-control-sm" data-table-search="tblScanLogs" placeholder="Buscar..." />
+            </div>
+            <div class="table-responsive">
+                <table id="tblScanLogs" class="table table-sm table-hover mb-0 sortable-table">
+                    <thead>
+                        <tr>
+                            <th data-sort-type="number">#</th>
+                            <th data-sort-type="date">Inicio</th>
+                            <th>Duracion</th>
+                            <th>Trigger</th>
+                            <th>Estado</th>
+                            <th data-sort-type="number">Clientes</th>
+                            <th data-sort-type="number">Objetos</th>
+                            <th data-sort-type="number">Cambios</th>
+                            <th data-sort-type="number">Errores</th>
+                            <th data-no-sort></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var scan in Model.ScanLogs)
+                        {
+                            var statusClass = scan.Status switch
+                            {
+                                DbSync.Core.Models.ScanStatus.Completed => "success",
+                                DbSync.Core.Models.ScanStatus.CompletedWithErrors => "warning",
+                                DbSync.Core.Models.ScanStatus.Running => "info",
+                                _ => "danger"
+                            };
+                            var duration = scan.CompletedAt.HasValue
+                                ? $"{(scan.CompletedAt.Value - scan.StartedAt).TotalSeconds:F0}s"
+                                : "...";
+                            <tr>
+                                <td>@scan.Id</td>
+                                <td><small>@scan.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td><small>@duration</small></td>
+                                <td>
+                                    <span class="badge bg-secondary">@scan.Trigger</span>
+                                    @if (!string.IsNullOrEmpty(scan.TriggeredBy))
+                                    {
+                                        <small class="text-muted">@scan.TriggeredBy</small>
+                                    }
+                                </td>
+                                <td><span class="badge bg-@statusClass">@scan.Status</span></td>
+                                <td>@scan.TotalClientes</td>
+                                <td>@scan.TotalObjectsScanned</td>
+                                <td>
+                                    @if (scan.TotalChangesDetected > 0)
+                                    {
+                                        <span class="text-primary fw-bold">@scan.TotalChangesDetected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (scan.TotalErrors > 0)
+                                    {
+                                        <span class="text-danger fw-bold">@scan.TotalErrors</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/Scanner/LogDetail?id=@scan.Id" class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted p-3 mb-0">No hay scan logs registrados.</p>
+        }
+    </div>
+</div>
