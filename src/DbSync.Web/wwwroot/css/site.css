@@ -252,3 +252,211 @@
 }
 .spinner-overlay.active { display: flex; }
 .spinner-overlay .spinner-text { font-size: 0.9rem; color: #495057; font-weight: 500; }
+
+/* ========== Compare Page — Dual Layout (Horizontal / Vertical) ========== */
+
+/* Compact navbar */
+.navbar {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+.navbar .nav-link {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.88rem;
+}
+.navbar-brand {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
+/* Compact toolbar */
+.compare-toolbar {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-bottom: 4px;
+}
+.compare-toolbar .form-select {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    font-size: 0.82rem;
+}
+
+/* Compact filters bar */
+.compare-filters-bar {
+    margin-bottom: 4px;
+    padding: 2px 0;
+}
+
+/* ---- Common split layout ---- */
+.compare-split {
+    display: flex;
+    min-height: 300px;
+}
+.compare-objects {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.compare-diff {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.compare-diff .diff-container {
+    max-height: none !important;
+    flex: 1;
+}
+
+/* ---- Horizontal mode (top/bottom) ---- */
+.split-horizontal {
+    flex-direction: column;
+    height: calc(100vh - 170px);
+}
+.split-horizontal .compare-objects {
+    min-height: 0;
+}
+.split-horizontal .compare-gutter {
+    height: 34px;
+    min-height: 34px;
+    flex-shrink: 0;
+    background: #2d333b;
+    cursor: row-resize;
+    transition: background 0.15s;
+}
+.split-horizontal .compare-gutter:hover {
+    background: #363d47;
+}
+.split-horizontal .gutter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+}
+.split-horizontal .diff-header-v { display: none; }
+.split-horizontal .col-narrow-only { display: none !important; }
+
+/* ---- Vertical mode (left/right) ---- */
+.split-vertical {
+    flex-direction: row;
+    height: calc(100vh - 170px);
+}
+.split-vertical .compare-objects {
+    min-width: 0;
+}
+.split-vertical .compare-gutter {
+    width: 6px;
+    flex-shrink: 0;
+    background: #d0d7de;
+    cursor: col-resize;
+    border-radius: 3px;
+    margin: 0 2px;
+    transition: background 0.15s;
+}
+.split-vertical .compare-gutter:hover,
+.split-vertical .compare-gutter:active {
+    background: #0d6efd;
+}
+.split-vertical .gutter-bar { display: none; }
+.split-vertical .diff-header-v {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+.split-vertical .compare-diff {
+    min-width: 0;
+}
+.split-vertical .col-wide-only { display: none !important; }
+.split-vertical .col-narrow-only { display: inline !important; }
+
+/* ---- Gutter bar content ---- */
+.gutter-object-name {
+    color: #adbac7;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 12px;
+}
+.gutter-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.split-horizontal .gutter-controls .btn-outline-secondary {
+    border-color: #444c56;
+    color: #adbac7;
+}
+.split-horizontal .gutter-controls .btn-outline-secondary:hover {
+    background: #444c56;
+    color: #fff;
+}
+.split-horizontal .gutter-controls .btn-outline-secondary:disabled {
+    border-color: #444c56;
+    color: #6e7681;
+}
+
+/* ---- Object Grid (table) ---- */
+.object-grid-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+.object-grid-toolbar input { max-width: 220px; }
+.object-grid-scroll {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+#objectGrid {
+    font-size: 0.78rem;
+    margin-bottom: 0;
+}
+#objectGrid thead th {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 3px 6px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8f9fa;
+    white-space: nowrap;
+}
+#objectGrid tbody tr.object-row {
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+#objectGrid tbody tr.object-row:hover {
+    background-color: #f0f6ff !important;
+}
+#objectGrid tbody tr.object-row.selected {
+    background-color: #dbeafe !important;
+    box-shadow: inset 3px 0 0 #0d6efd;
+}
+#objectGrid tbody td {
+    padding: 2px 6px;
+    vertical-align: middle;
+}
+
+/* Layout toggle button */
+.btn-layout-toggle {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.45rem;
+}
