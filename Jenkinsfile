@@ -30,6 +30,17 @@ pipeline {
                         }
                     }
 
+                    // Resolver ruta completa del proyecto a publicar si es solo un nombre de archivo
+                    if (env.PUBLISH_PROJECT?.trim() && !env.PUBLISH_PROJECT.contains('\\') && !env.PUBLISH_PROJECT.contains('/')) {
+                        def found = bat(script: "@dir /s /b ${env.PUBLISH_PROJECT} 2>nul", returnStdout: true).trim()
+                        if (found) {
+                            def fullPath = found.split('\n')[0].trim()
+                            // Convertir ruta absoluta a relativa al workspace
+                            env.PUBLISH_PROJECT = fullPath.replace(env.WORKSPACE + '\\', '')
+                            echo "OK Proyecto a publicar: ${env.PUBLISH_PROJECT}"
+                        }
+                    }
+
                     echo """
                     Configuracion:
                       Tipo:     ${env.PROJECT_TYPE}
