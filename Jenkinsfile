@@ -55,13 +55,14 @@ pipeline {
 
                     echo """
                     Configuracion:
-                      Tipo:     ${env.PROJECT_TYPE}
-                      Solucion: ${env.SOLUTION_FILE}
-                      Publish:  ${env.PUBLISH_PROJECT ?: '(solucion completa)'}
-                      Sitio:    ${env.SITE_NAME}
-                      Dominio:  https://${env.DOMAIN}
-                      Path:     ${env.PHYSICAL_PATH}
-                      AppPool:  ${env.APP_POOL}
+                      Tipo:       ${env.PROJECT_TYPE}
+                      Solucion:   ${env.SOLUTION_FILE}
+                      Publish:    ${env.PUBLISH_PROJECT ?: '(solucion completa)'}
+                      Sitio:      ${env.SITE_NAME}
+                      Dominio:    https://${env.DOMAIN}
+                      Path:       ${env.PHYSICAL_PATH}
+                      AppPool:    ${env.APP_POOL}
+                      IncVersion: ${env.INCREMENT_VERSION ?: 'false'}
                     """
                 }
             }
@@ -200,11 +201,8 @@ pipeline {
             steps {
                 script {
                     def sourceDir = (env.PROJECT_TYPE == 'static') ? '.\\dist' : '.\\publish'
-                    // .NET Framework: excluir web.config (tiene connection strings)
-                    // .NET Core: incluir web.config (AspNetCoreModuleV2) pero excluir appsettings (tiene connection strings)
-                    def excludeFiles = (env.PROJECT_TYPE == 'dotnet-framework') ? '/XF web.config .jenkins-env' : '/XF appsettings.json appsettings.*.json .jenkins-env'
                     bat """
-                        robocopy ${sourceDir} "${PHYSICAL_PATH}" /MIR /XD .git node_modules ${excludeFiles} /NFL /NDL /NP
+                        robocopy ${sourceDir} "${PHYSICAL_PATH}" /MIR /XD .git node_modules /XF web.config appsettings.json appsettings.*.json .jenkins-env /NFL /NDL /NP
                         exit /b 0
                     """
                 }
@@ -273,9 +271,10 @@ pipeline {
                 }
                 // Email notification
                 if (env.MAIL_SUCCESS?.trim()) {
-                    mail to: env.MAIL_SUCCESS,
-                         subject: "Deploy Exitoso: ${env.SITE_NAME}",
-                         body: "Deploy exitoso para ${env.SITE_NAME}\nURL: https://${env.DOMAIN}\nFecha: ${new Date().format('dd/MM/yyyy HH:mm')}"
+                    emailext to: env.MAIL_SUCCESS,
+                             subject: "Deploy Exitoso: ${env.SITE_NAME}",
+                             body: "Deploy exitoso para ${env.SITE_NAME}\nURL: https://${env.DOMAIN}\nFecha: ${new Date().format('dd/MM/yyyy HH:mm')}",
+                             mimeType: 'text/plain'
                 }
             }
         }
@@ -283,9 +282,10 @@ pipeline {
             echo "ERROR Deploy fallo para ${SITE_NAME}"
             script {
                 if (env.MAIL_FAILURE?.trim()) {
-                    mail to: env.MAIL_FAILURE,
-                         subject: "Deploy Fallido: ${env.SITE_NAME}",
-                         body: "El deploy fallo para ${env.SITE_NAME}.\nURL: https://${env.DOMAIN}\nRevisar logs en Jenkins: ${env.BUILD_URL}"
+                    emailext to: env.MAIL_FAILURE,
+                             subject: "Deploy Fallido: ${env.SITE_NAME}",
+                             body: "El deploy fallo para ${env.SITE_NAME}.\nURL: https://${env.DOMAIN}\nRevisar logs en Jenkins: ${env.BUILD_URL}",
+                             mimeType: 'text/plain'
                 }
             }
         }
