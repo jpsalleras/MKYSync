@@ -27,6 +27,7 @@ artifacts/
 
 # ASP.NET
 ScaffoldingReadMe.txt
+appsettings.Development.json
 
 # SQLite databases
 *.db

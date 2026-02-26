@@ -5,17 +5,13 @@
     ViewData["Title"] = "Comparar Ambientes";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="mb-0"><i class="bi bi-file-diff"></i> Comparar</h2>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()">
-        <i class="bi bi-arrow-left"></i> Volver
-    </button>
-</div>
-
-<!-- Selector -->
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="btn-group btn-group-sm mb-2" role="group">
+@* ===== Compact Selector Toolbar ===== *@
+<div class="compare-toolbar" id="compareToolbar">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h5 class="mb-0 me-2" style="font-size:1rem;white-space:nowrap">
+            <i class="bi bi-file-diff"></i> Comparar
+        </h5>
+        <div class="btn-group btn-group-sm" role="group">
             <input type="radio" class="btn-check" name="modoToggle" id="modoAmbiente" autocomplete="off"
                    @(Model.Modo == "ambiente" ? "checked" : "") onchange="setModo('ambiente')">
             <label class="btn btn-outline-primary" for="modoAmbiente">
@@ -28,94 +24,79 @@
             </label>
         </div>
 
-        <form method="get" id="compareForm">
+        <div class="vr mx-1"></div>
+
+        <form method="get" id="compareForm" class="d-flex align-items-center gap-1 flex-wrap mb-0">
             <input type="hidden" name="modo" id="modoInput" value="@Model.Modo" />
 
-            <!-- Modo Ambiente -->
-            <div class="row g-2 align-items-end" id="selectorAmbiente" style="display:@(Model.Modo == "ambiente" ? "" : "none")">
-                <div class="col-md-4">
-                    <label class="form-label">Cliente</label>
-                    <select name="clienteId" asp-items="Model.ClientesList" class="form-select" id="selClienteAmb">
-                        <option value="">-- Seleccionar --</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Origen</label>
-                    <select name="origen" class="form-select" id="selOrigen">
-                        <option value="DEV" selected="@(Model.Origen == "DEV")">DEV</option>
-                        <option value="QA" selected="@(Model.Origen == "QA")">QA</option>
-                        <option value="PR" selected="@(Model.Origen == "PR")">PR</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Destino</label>
-                    <select name="destino" class="form-select" id="selDestinoAmb">
-                        <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
-                        <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
-                        <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-select" id="selTipoAmb">
-                        <option value="">Todos</option>
-                        <option value="SP" selected="@(Model.Tipo == "SP")">Stored Procedures</option>
-                        <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
-                        <option value="FN" selected="@(Model.Tipo == "FN")">Funciones</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100" data-loading="Comparando..." data-overlay>
-                        <i class="bi bi-search"></i> Comparar
-                    </button>
-                </div>
+            @* Modo Ambiente *@
+            <div class="d-flex align-items-center gap-1" id="selectorAmbiente" style="display:@(Model.Modo == "ambiente" ? "" : "none")">
+                <select name="clienteId" asp-items="Model.ClientesList" class="form-select form-select-sm" id="selClienteAmb" title="Cliente" style="min-width:160px">
+                    <option value="">-- Cliente --</option>
+                </select>
+                <select name="origen" class="form-select form-select-sm" id="selOrigen" title="Origen" style="width:65px">
+                    <option value="DEV" selected="@(Model.Origen == "DEV")">DEV</option>
+                    <option value="QA" selected="@(Model.Origen == "QA")">QA</option>
+                    <option value="PR" selected="@(Model.Origen == "PR")">PR</option>
+                </select>
+                <i class="bi bi-arrow-right text-muted"></i>
+                <select name="destino" class="form-select form-select-sm" id="selDestinoAmb" title="Destino" style="width:65px">
+                    <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
+                    <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
+                    <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
+                </select>
+                <select name="tipo" class="form-select form-select-sm" id="selTipoAmb" title="Tipo" style="width:90px">
+                    <option value="">Todos</option>
+                    <option value="SP" selected="@(Model.Tipo == "SP")">SP</option>
+                    <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
+                    <option value="FN" selected="@(Model.Tipo == "FN")">Func.</option>
+                </select>
             </div>
 
-            <!-- Modo Version -->
-            <div class="row g-2 align-items-end" id="selectorVersion" style="display:@(Model.Modo == "version" ? "" : "none")">
-                <div class="col-md-3">
-                    <label class="form-label">Version Base (Origen)</label>
-                    <select name="versionId" class="form-select" id="selVersionId">
-                        <option value="">-- Seleccionar version --</option>
-                        @foreach (var v in Model.VersionesList)
-                        {
-                            <option value="@v.Value" selected="@v.Selected">@v.Text</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Cliente (Destino)</label>
-                    <select name="clienteId" asp-items="Model.ClientesList" class="form-select" id="selClienteVer">
-                        <option value="">-- Seleccionar --</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Ambiente Destino</label>
-                    <select name="destino" class="form-select" id="selDestinoVer">
-                        <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
-                        <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
-                        <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-select" id="selTipoVer">
-                        <option value="">Todos</option>
-                        <option value="SP" selected="@(Model.Tipo == "SP")">Stored Procedures</option>
-                        <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
-                        <option value="FN" selected="@(Model.Tipo == "FN")">Funciones</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100" data-loading="Comparando..." data-overlay>
-                        <i class="bi bi-search"></i> Comparar
-                    </button>
-                </div>
+            @* Modo Version *@
+            <div class="d-flex align-items-center gap-1" id="selectorVersion" style="display:@(Model.Modo == "version" ? "" : "none")">
+                <select name="versionId" class="form-select form-select-sm" id="selVersionId" title="Version Base" style="min-width:160px">
+                    <option value="">-- Version --</option>
+                    @foreach (var v in Model.VersionesList)
+                    {
+                        <option value="@v.Value" selected="@v.Selected">@v.Text</option>
+                    }
+                </select>
+                <select name="clienteId" asp-items="Model.ClientesList" class="form-select form-select-sm" id="selClienteVer" title="Cliente" style="min-width:160px">
+                    <option value="">-- Cliente --</option>
+                </select>
+                <i class="bi bi-arrow-right text-muted"></i>
+                <select name="destino" class="form-select form-select-sm" id="selDestinoVer" title="Destino" style="width:65px">
+                    <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
+                    <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
+                    <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
+                </select>
+                <select name="tipo" class="form-select form-select-sm" id="selTipoVer" title="Tipo" style="width:90px">
+                    <option value="">Todos</option>
+                    <option value="SP" selected="@(Model.Tipo == "SP")">SP</option>
+                    <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
+                    <option value="FN" selected="@(Model.Tipo == "FN")">Func.</option>
+                </select>
             </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" data-loading="Comparando..." data-overlay>
+                <i class="bi bi-search"></i> Comparar
+            </button>
         </form>
+
+        <div class="ms-auto d-flex gap-1">
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-layout-toggle" id="btnLayoutToggle"
+                    onclick="toggleLayout()" title="Cambiar disposicion">
+                <i class="bi bi-layout-split" id="layoutIcon"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()" title="Volver">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+        </div>
     </div>
 </div>
 
+@* ===== Error Modals ===== *@
 @if (Model.ErrorMessage != null)
 {
     <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
@@ -337,7 +318,6 @@
 
     @if (Model.CanExecute)
     {
-        <!-- Modal de confirmacion de sincronizacion -->
         <div class="modal fade" id="confirmSyncModal" tabindex="-1" aria-labelledby="confirmSyncModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -381,30 +361,54 @@
 
 @if (Model.Summary != null && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync)
 {
-    <!-- Resumen -->
-    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
-        <span class="badge bg-success stat-badge" role="button" onclick="filterStatus('Equal')">
-            @Model.Summary.TotalEqual Iguales
-        </span>
-        <span class="badge bg-warning text-dark stat-badge" role="button" onclick="filterStatus('Modified')">
-            @Model.Summary.TotalModified Modificados
-        </span>
-        <span class="badge bg-primary stat-badge" role="button" onclick="filterStatus('OnlyInSource')">
-            @Model.Summary.TotalOnlyInSource Solo @Model.OrigenLabel
-        </span>
-        <span class="badge bg-danger stat-badge" role="button" onclick="filterStatus('OnlyInTarget')">
-            @Model.Summary.TotalOnlyInTarget Solo @Model.Destino
-        </span>
-        <span class="badge stat-badge" style="background:#6f42c1" role="button" onclick="filterStatus('Custom')">
-            @Model.Summary.TotalCustom Custom
-        </span>
-        <span class="text-muted small ms-auto">
-            @Model.Summary.TotalObjects objetos en @Model.Summary.Duracion.TotalSeconds.ToString("F1")s
-        </span>
+    @* ===== Filter badges + Sync toolbar (merged into one bar) ===== *@
+    <div class="compare-filters-bar" id="filtersBar">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="badge bg-success stat-badge" role="button" onclick="filterStatus('Equal')">
+                @Model.Summary.TotalEqual Iguales
+            </span>
+            <span class="badge bg-warning text-dark stat-badge" role="button" onclick="filterStatus('Modified')">
+                @Model.Summary.TotalModified Modificados
+            </span>
+            <span class="badge bg-primary stat-badge" role="button" onclick="filterStatus('OnlyInSource')">
+                @Model.Summary.TotalOnlyInSource Solo @Model.OrigenLabel
+            </span>
+            <span class="badge bg-danger stat-badge" role="button" onclick="filterStatus('OnlyInTarget')">
+                @Model.Summary.TotalOnlyInTarget Solo @Model.Destino
+            </span>
+            <span class="badge stat-badge" style="background:#6f42c1" role="button" onclick="filterStatus('Custom')">
+                @Model.Summary.TotalCustom Custom
+            </span>
+
+            @{
+                var showCheckboxes = Model.CanSync && Model.Summary.HasDifferences
+                    && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync;
+            }
+
+            @if (showCheckboxes)
+            {
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="selectAllSync(true)" style="font-size:0.75rem">
+                    Todos
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="selectAllSync(false)" style="font-size:0.75rem">
+                    Ninguno
+                </button>
+                <span class="text-muted small" id="syncSelectionCount"></span>
+                <button type="button" class="btn btn-warning btn-sm fw-semibold shadow-sm"
+                        data-loading="Generando preview..." data-overlay
+                        id="btnPreviewSync" onclick="submitSyncForm()" style="font-size:0.78rem">
+                    <i class="bi bi-arrow-right-circle-fill"></i> Sync (@Model.OrigenLabel &rarr; @Model.Destino)
+                </button>
+            }
+
+            <span class="text-muted small ms-auto">
+                @Model.Summary.TotalObjects obj en @Model.Summary.Duracion.TotalSeconds.ToString("F1")s
+            </span>
+        </div>
     </div>
 
-    @* ===== Toolbar de sync + formulario oculto (solo DBA/Admin) ===== *@
-    @if (Model.CanSync && Model.Summary.HasDifferences && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync)
+    @if (showCheckboxes)
     {
         <form method="post" asp-page-handler="PreviewSync" id="syncForm">
             <input type="hidden" name="ClienteId" value="@Model.ClienteId" />
@@ -418,134 +422,163 @@
             }
             <div id="syncHiddenInputs"></div>
         </form>
-
-        <div class="card mb-2 border-info" id="syncToolbar">
-            <div class="card-body py-2 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(true)">
-                        Seleccionar todos
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(false)">
-                        Deseleccionar todos
-                    </button>
-                    <span class="text-muted small" id="syncSelectionCount"></span>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-warning btn-sm"
-                            data-loading="Generando preview..." data-overlay
-                            id="btnPreviewSync" onclick="submitSyncForm()">
-                        <i class="bi bi-arrow-right-circle"></i> Previsualizar (@Model.OrigenLabel &rarr; @Model.Destino)
-                    </button>
-                </div>
-            </div>
-        </div>
     }
 
-    <!-- Lista de objetos + Splitter + Diff -->
-    <div class="split-container" id="splitContainer">
-        <div class="split-panel" id="objectListPanel" style="width:35%">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Objetos</span>
-                    <input type="text" id="searchBox" class="form-control form-control-sm w-50" placeholder="Buscar..." />
-                </div>
-                <div class="list-group list-group-flush" style="overflow-y: auto; flex: 1;">
-                    @{
-                        var showCheckboxes = Model.CanSync && Model.Summary.HasDifferences
-                            && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync;
-                    }
-                    @foreach (var result in Model.Summary.Results
-                        .Where(r => r.Status != CompareStatus.Equal)
-                        .OrderByDescending(r => r.Source?.LastModified ?? DateTime.MinValue))
-                    {
-                        var statusBadge = result.Status switch
-                        {
-                            CompareStatus.Modified => "badge-modified",
-                            CompareStatus.OnlyInSource => "badge-only-source",
-                            CompareStatus.OnlyInTarget => "badge-only-target",
-                            _ => ""
-                        };
-                        var statusText = result.Status switch
-                        {
-                            CompareStatus.Modified => "MOD",
-                            CompareStatus.OnlyInSource => $"SOLO {Model.OrigenLabel}",
-                            CompareStatus.OnlyInTarget => $"SOLO {Model.Destino}",
-                            _ => ""
-                        };
+    @* ===== Split Layout (dual mode: horizontal / vertical) ===== *@
+    <div id="splitContainer" class="compare-split split-horizontal">
 
-                        <a href="#" class="list-group-item list-group-item-action object-row"
-                           data-status="@result.Status" data-name="@result.ObjectFullName"
-                           onclick="showDiff('@result.ObjectFullName'); return false;">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    @if (showCheckboxes)
-                                    {
-                                        var isDisabled = result.IsCustom;
-                                        <input type="checkbox" class="form-check-input me-2 sync-checkbox"
+        @* --- Object Panel --- *@
+        <div id="objectPanel" class="compare-objects" style="height:38%">
+            <div class="object-grid-toolbar">
+                <input type="text" id="searchBox" class="form-control form-control-sm" placeholder="Buscar objeto..." />
+                <span id="gridRowCount" class="small text-muted"></span>
+            </div>
+            <div class="object-grid-scroll">
+                <table id="objectGrid" class="table table-sm table-hover mb-0 sortable-table">
+                    <thead class="table-light">
+                        <tr>
+                            @if (showCheckboxes)
+                            {
+                                <th style="width:28px" data-no-sort>
+                                    <input type="checkbox" class="form-check-input" id="chkSelectAll"
+                                           onclick="selectAllSync(this.checked)" title="Seleccionar todos" />
+                                </th>
+                            }
+                            <th style="width:28px" data-no-sort class="col-wide-only text-center">Tipo</th>
+                            <th>Objeto</th>
+                            <th style="width:70px">Estado</th>
+                            <th style="width:80px" data-sort-type="number" class="col-wide-only">+/-</th>
+                            <th style="width:115px" data-sort-type="date" class="col-wide-only">Modificado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var result in Model.Summary.Results
+                            .Where(r => r.Status != CompareStatus.Equal)
+                            .OrderByDescending(r => r.Source?.LastModified ?? r.Target?.LastModified ?? DateTime.MinValue))
+                        {
+                            var statusBadge = result.Status switch
+                            {
+                                CompareStatus.Modified => "badge-modified",
+                                CompareStatus.OnlyInSource => "badge-only-source",
+                                CompareStatus.OnlyInTarget => "badge-only-target",
+                                _ => ""
+                            };
+                            var statusText = result.Status switch
+                            {
+                                CompareStatus.Modified => "MOD",
+                                CompareStatus.OnlyInSource => $"SOLO {Model.OrigenLabel}",
+                                CompareStatus.OnlyInTarget => $"SOLO {Model.Destino}",
+                                _ => ""
+                            };
+                            var typeIcon = result.ObjectType switch
+                            {
+                                DbObjectType.StoredProcedure => "bi-filetype-sql",
+                                DbObjectType.View => "bi-table",
+                                _ => "bi-braces"
+                            };
+                            var typeLabel = result.ObjectType.ToShortCode();
+                            var lastMod = result.Source?.LastModified ?? result.Target?.LastModified;
+                            var hasDate = lastMod.HasValue && lastMod.Value != default(DateTime);
+
+                            <tr class="object-row" data-status="@result.Status" data-name="@result.ObjectFullName"
+                                onclick="showDiff(this.dataset.name)">
+                                @if (showCheckboxes)
+                                {
+                                    <td class="text-center" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="form-check-input sync-checkbox"
                                                data-object-name="@result.ObjectFullName"
-                                               @(isDisabled ? "disabled" : "")
-                                               onclick="event.stopPropagation(); updateSyncCount();" />
-                                    }
+                                               @(result.IsCustom ? "disabled" : "")
+                                               onchange="updateSyncCount()" />
+                                    </td>
+                                }
+                                <td class="text-center col-wide-only" title="@typeLabel">
+                                    <i class="bi @typeIcon text-muted"></i>
+                                </td>
+                                <td>
                                     <code class="small">@result.ObjectFullName</code>
                                     @if (result.IsCustom)
                                     {
-                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.65rem">CUSTOM</span>
+                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.55rem">C</span>
                                     }
-                                </div>
-                                <div>
-                                    <span class="badge @statusBadge text-white">@statusText</span>
-                                    <span class="badge bg-light text-dark">@result.ObjectType.ToShortCode()</span>
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                @if (result.Source?.LastModified != default(DateTime) && result.Source?.LastModified != null)
-                                {
-                                    <i class="bi bi-clock"></i> @result.Source.LastModified.ToString("dd/MM/yyyy HH:mm")
-                                }
-                                @if (result.Status == CompareStatus.Modified)
-                                {
-                                    <text> &mdash; +@result.LinesAdded / -@result.LinesRemoved lineas</text>
-                                }
-                            </small>
-                        </a>
-                    }
+                                    <span class="col-narrow-only text-muted" style="font-size:0.7rem">
+                                        &mdash; @typeLabel
+                                        @if (hasDate)
+                                        {
+                                            <text> &middot; @lastMod.Value.ToString("dd/MM HH:mm")</text>
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @statusBadge text-white" style="font-size:0.6rem">@statusText</span>
+                                </td>
+                                <td class="small text-muted col-wide-only" style="white-space:nowrap" data-sort-value="@(result.LinesAdded + result.LinesRemoved)">
+                                    @if (result.Status == CompareStatus.Modified)
+                                    {
+                                        <span class="text-success">+@result.LinesAdded</span>
+                                        <span class="text-danger">-@result.LinesRemoved</span>
+                                    }
+                                </td>
+                                <td class="small text-muted col-wide-only" data-sort-value="@(hasDate ? lastMod.Value.ToString("yyyyMMddHHmm") : "")">
+                                    @if (hasDate)
+                                    {
+                                        @lastMod.Value.ToString("dd/MM/yy HH:mm")
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* --- Gutter (horizontal bar / vertical divider) --- *@
+        <div id="splitGutter" class="compare-gutter">
+            <div id="gutterBar" class="gutter-bar">
+                <span id="diffTitle" class="gutter-object-name">Seleccione un objeto</span>
+                <div id="diffControls" class="gutter-controls">
+                    <div class="btn-group btn-group-sm" id="grpCopyMerge" style="display:none">
+                        <button type="button" class="btn btn-outline-secondary" id="btnCopySource"
+                                onclick="copyDiffSide(0, this)" title="Copiar @Model.OrigenLabel">
+                            <i class="bi bi-clipboard"></i> @Model.OrigenLabel
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnCopyTarget"
+                                onclick="copyDiffSide(1, this)" title="Copiar @Model.Destino">
+                            <i class="bi bi-clipboard"></i> @Model.Destino
+                        </button>
+                        @if (Model.MergeEnabled)
+                        {
+                            <button type="button" class="btn btn-outline-primary" id="btnSuggestMerge"
+                                    onclick="suggestMerge()" title="Sugerir merge con IA" style="display:none">
+                                <i class="bi bi-stars"></i> Merge
+                            </button>
+                        }
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" id="btnPrevDiff" onclick="prevDiff()" title="Diferencia anterior" disabled>
+                            <i class="bi bi-chevron-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnDiffCount" disabled style="font-size:0.7rem;min-width:50px">
+                            0/0
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnNextDiff" onclick="nextDiff()" title="Diferencia siguiente" disabled>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnToggleExpand" onclick="toggleExpand()" title="Expandir/Contraer">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="split-gutter" id="splitGutter"></div>
-
-        <div class="split-panel" id="diffPanel" style="flex:1">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center" id="diffHeader">
-                    <span id="diffTitle">Seleccione un objeto para ver el diff</span>
-                    <div class="d-flex align-items-center gap-2">
-                        @if (Model.MergeEnabled)
-                        {
-                            <button type="button" class="btn btn-sm btn-primary" id="btnSuggestMerge"
-                                    onclick="suggestMerge()" title="Sugerir merge con IA" style="display:none">
-                                <i class="bi bi-stars"></i> Sugerir Merge
-                            </button>
-                        }
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" id="btnPrevDiff" onclick="prevDiff()" title="Diferencia anterior" disabled>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnDiffCount" disabled style="font-size:0.7rem;min-width:50px">
-                                0/0
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnNextDiff" onclick="nextDiff()" title="Diferencia siguiente" disabled>
-                                <i class="bi bi-chevron-down"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnToggleExpand" onclick="toggleExpand()" title="Expandir/Contraer">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="diff-container" id="diffContainer" style="overflow: auto; flex: 1;">
-                    <p class="text-muted p-3">Haga clic en un objeto de la lista para ver las diferencias.</p>
-                </div>
+        @* --- Diff Panel --- *@
+        <div id="diffPanel" class="compare-diff" style="flex:1">
+            @* Header shown only in vertical mode *@
+            <div id="diffHeaderV" class="diff-header-v">
+                @* Controls will be moved here via JS in vertical mode *@
+            </div>
+            <div class="diff-container" id="diffContainer" data-no-copy-btns style="overflow: auto; flex: 1;">
+                <p class="text-muted p-3">Seleccione un objeto para ver las diferencias.</p>
             </div>
         </div>
     </div>
@@ -596,7 +629,7 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
 
 @section Scripts {
 <script>
-    // Almacenar los diffs en un objeto JS para mostrar al hacer clic
+    // ===== Diff data =====
     var diffs = {};
     @if (Model.Summary != null)
     {
@@ -606,31 +639,86 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
         }
     }
 
-    function showDiff(objectName) {
-        document.getElementById('diffTitle').textContent = objectName;
-        var html = diffs[objectName];
-        if (html) {
-            document.getElementById('diffContainer').innerHTML = html;
+    // ===== Layout management =====
+    var currentLayout = localStorage.getItem('compareLayout') || 'horizontal';
+
+    function initLayout() {
+        var container = document.getElementById('splitContainer');
+        if (!container) return;
+        applyLayout(currentLayout);
+    }
+
+    function applyLayout(layout) {
+        var container = document.getElementById('splitContainer');
+        if (!container) return;
+        currentLayout = layout;
+
+        var objectPanel = document.getElementById('objectPanel');
+        var controls = document.getElementById('diffControls');
+        var diffTitle = document.getElementById('diffTitle');
+        var gutterBar = document.getElementById('gutterBar');
+        var diffHeaderV = document.getElementById('diffHeaderV');
+        var icon = document.getElementById('layoutIcon');
+
+        if (layout === 'horizontal') {
+            container.classList.remove('split-vertical');
+            container.classList.add('split-horizontal');
+            objectPanel.style.height = objectPanel.style.height || '38%';
+            objectPanel.style.width = '';
+            // Move controls to gutter bar
+            if (gutterBar && controls) gutterBar.appendChild(controls);
+            if (gutterBar && diffTitle) gutterBar.insertBefore(diffTitle, controls);
+            if (icon) icon.className = 'bi bi-layout-sidebar';
         } else {
-            document.getElementById('diffContainer').innerHTML = '<p class="text-muted p-3">Este objeto no tiene diff (solo existe en un ambiente).</p>';
+            container.classList.remove('split-horizontal');
+            container.classList.add('split-vertical');
+            objectPanel.style.width = objectPanel.style.width || '35%';
+            objectPanel.style.height = '';
+            // Move controls to diff header
+            if (diffHeaderV && controls) diffHeaderV.appendChild(controls);
+            if (diffHeaderV && diffTitle) diffHeaderV.insertBefore(diffTitle, controls);
+            if (icon) icon.className = 'bi bi-layout-split';
+        }
+    }
+
+    function toggleLayout() {
+        var newLayout = currentLayout === 'horizontal' ? 'vertical' : 'horizontal';
+        applyLayout(newLayout);
+        localStorage.setItem('compareLayout', newLayout);
+    }
+
+    // ===== Show diff =====
+    function showDiff(objectName) {
+        var titleEl = document.getElementById('diffTitle');
+        if (titleEl) titleEl.textContent = objectName;
+
+        var html = diffs[objectName];
+        var diffContainer = document.getElementById('diffContainer');
+        if (html) {
+            diffContainer.innerHTML = html;
+        } else {
+            diffContainer.innerHTML = '<p class="text-muted p-3">Este objeto no tiene diff (solo existe en un ambiente).</p>';
         }
 
-        // Marcar seleccionado
-        document.querySelectorAll('.object-row').forEach(r => r.classList.remove('selected'));
-        var selectedRow = document.querySelector('[data-name="' + objectName + '"]');
-        selectedRow?.classList.add('selected');
+        // Mark selected row
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(r) { r.classList.remove('selected'); });
+        var selectedRow = document.querySelector('#objectGrid [data-name="' + objectName + '"]');
+        if (selectedRow) selectedRow.classList.add('selected');
 
-        // Mostrar/ocultar botón Sugerir Merge (solo para objetos Modified)
+        // Show copy/merge button group when a diff is loaded
+        var grpCopyMerge = document.getElementById('grpCopyMerge');
+        if (grpCopyMerge) grpCopyMerge.style.display = html ? '' : 'none';
+
+        // Show merge button only for Modified objects
         var mergeBtn = document.getElementById('btnSuggestMerge');
         if (mergeBtn) {
-            var isModified = selectedRow && selectedRow.dataset.status === 'Modified';
-            mergeBtn.style.display = isModified ? '' : 'none';
+            mergeBtn.style.display = (selectedRow && selectedRow.dataset.status === 'Modified') ? '' : 'none';
         }
 
         initDiffNav();
     }
 
-    // --- Navegacion entre diferencias ---
+    // ===== Diff navigation =====
     var diffRows = [];
     var diffIndex = -1;
 
@@ -669,48 +757,48 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
 
     function updateDiffNavUI() {
         var total = diffRows.length;
-        document.getElementById('btnPrevDiff').disabled = total === 0;
-        document.getElementById('btnNextDiff').disabled = total === 0;
-        document.getElementById('btnDiffCount').textContent = total > 0 ? (diffIndex + 1) + '/' + total : '0/0';
+        var prev = document.getElementById('btnPrevDiff');
+        var next = document.getElementById('btnNextDiff');
+        var count = document.getElementById('btnDiffCount');
+        if (prev) prev.disabled = total === 0;
+        if (next) next.disabled = total === 0;
+        if (count) count.textContent = total > 0 ? (diffIndex + 1) + '/' + total : '0/0';
     }
 
+    // ===== Expand / Contract =====
     var expanded = false;
     function toggleExpand() {
-        var listPanel = document.getElementById('objectListPanel');
+        var objectPanel = document.getElementById('objectPanel');
         var gutter = document.getElementById('splitGutter');
         var splitContainer = document.getElementById('splitContainer');
         var icon = document.querySelector('#btnToggleExpand i');
-        var filters = document.querySelector('.card.mb-3');
-        var stats = document.querySelectorAll('.row.g-2');
-        var summary = document.querySelector('p.text-muted');
-        var titleRow = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-2');
-        var syncToolbar = document.getElementById('syncToolbar');
+        var toolbar = document.getElementById('compareToolbar');
+        var filtersBar = document.getElementById('filtersBar');
+        var syncForm = document.getElementById('syncForm');
+
         expanded = !expanded;
         if (expanded) {
-            listPanel.style.display = 'none';
-            gutter.style.display = 'none';
-            icon.className = 'bi bi-arrows-angle-contract';
-            if (filters) filters.style.display = 'none';
-            stats.forEach(function(s) { s.style.display = 'none'; });
-            if (summary) summary.style.display = 'none';
-            if (titleRow) titleRow.style.display = 'none';
-            if (syncToolbar) syncToolbar.style.display = 'none';
-            splitContainer.style.height = 'calc(100vh - 80px)';
+            if (objectPanel) objectPanel.style.display = 'none';
+            if (currentLayout === 'vertical' && gutter) gutter.style.display = 'none';
+            if (icon) icon.className = 'bi bi-arrows-angle-contract';
+            if (toolbar) toolbar.style.display = 'none';
+            if (filtersBar) filtersBar.style.display = 'none';
+            if (syncForm) syncForm.style.display = 'none';
+            if (splitContainer) splitContainer.style.height = 'calc(100vh - 50px)';
         } else {
-            listPanel.style.display = '';
-            gutter.style.display = '';
-            icon.className = 'bi bi-arrows-fullscreen';
-            if (filters) filters.style.display = '';
-            stats.forEach(function(s) { s.style.display = ''; });
-            if (summary) summary.style.display = '';
-            if (titleRow) titleRow.style.display = '';
-            if (syncToolbar) syncToolbar.style.display = '';
-            splitContainer.style.height = '';
+            if (objectPanel) objectPanel.style.display = '';
+            if (gutter) gutter.style.display = '';
+            if (icon) icon.className = 'bi bi-arrows-fullscreen';
+            if (toolbar) toolbar.style.display = '';
+            if (filtersBar) filtersBar.style.display = '';
+            if (syncForm) syncForm.style.display = '';
+            if (splitContainer) splitContainer.style.height = '';
         }
     }
 
+    // ===== Filtering =====
     function filterStatus(status) {
-        document.querySelectorAll('.object-row').forEach(row => {
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(row) {
             if (status === 'Custom') {
                 row.style.display = row.querySelector('.badge-custom') ? '' : 'none';
             } else {
@@ -718,39 +806,61 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
             }
         });
         updateSyncCount();
+        updateGridRowCount();
     }
 
-    // Busqueda
+    function updateGridRowCount() {
+        var visible = document.querySelectorAll('#objectGrid .object-row:not([style*="display: none"])').length;
+        var total = document.querySelectorAll('#objectGrid .object-row').length;
+        var el = document.getElementById('gridRowCount');
+        if (el) el.textContent = visible === total ? total + ' objetos' : visible + ' de ' + total;
+    }
+
+    // Search
     document.getElementById('searchBox')?.addEventListener('input', function(e) {
         var term = e.target.value.toLowerCase();
-        document.querySelectorAll('.object-row').forEach(row => {
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(row) {
             row.style.display = row.dataset.name.toLowerCase().includes(term) ? '' : 'none';
         });
         updateSyncCount();
+        updateGridRowCount();
     });
 
-    // Splitter drag
+    // ===== Splitter drag (adapts to layout mode) =====
     (function() {
         var gutter = document.getElementById('splitGutter');
         var container = document.getElementById('splitContainer');
-        var leftPanel = document.getElementById('objectListPanel');
-        if (!gutter || !container || !leftPanel) return;
+        var objectPanel = document.getElementById('objectPanel');
+        if (!gutter || !container || !objectPanel) return;
         var dragging = false;
+
         gutter.addEventListener('mousedown', function(e) {
             e.preventDefault();
             dragging = true;
-            document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
+            document.body.style.cursor = currentLayout === 'horizontal' ? 'row-resize' : 'col-resize';
         });
+
         document.addEventListener('mousemove', function(e) {
             if (!dragging) return;
             var rect = container.getBoundingClientRect();
-            var x = e.clientX - rect.left;
-            var pct = (x / rect.width) * 100;
-            if (pct < 15) pct = 15;
-            if (pct > 70) pct = 70;
-            leftPanel.style.width = pct + '%';
+
+            if (currentLayout === 'horizontal') {
+                var y = e.clientY - rect.top;
+                var pct = (y / rect.height) * 100;
+                if (pct < 15) pct = 15;
+                if (pct > 75) pct = 75;
+                objectPanel.style.height = pct + '%';
+                objectPanel.style.flex = 'none';
+            } else {
+                var x = e.clientX - rect.left;
+                var pct = (x / rect.width) * 100;
+                if (pct < 15) pct = 15;
+                if (pct > 70) pct = 70;
+                objectPanel.style.width = pct + '%';
+            }
         });
+
         document.addEventListener('mouseup', function() {
             if (dragging) {
                 dragging = false;
@@ -760,7 +870,7 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
         });
     })();
 
-    // --- Sync checkbox management ---
+    // ===== Sync checkbox management =====
     function updateSyncCount() {
         var checkboxes = document.querySelectorAll('.sync-checkbox:not(:disabled)');
         if (checkboxes.length === 0) return;
@@ -788,6 +898,9 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
             }
         });
         updateSyncCount();
+        // Update header checkbox
+        var chkAll = document.getElementById('chkSelectAll');
+        if (chkAll) chkAll.checked = select;
     }
 
     function copyScript(btn) {
@@ -803,8 +916,31 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
         });
     }
 
+    // Copy source (side=0) or target (side=1) from the current diff table
+    function copyDiffSide(side, btn) {
+        var table = document.querySelector('#diffContainer .diff-table');
+        if (!table) return;
+        // colIndex: source content is col 1, target content is col 3
+        var colIndex = side === 0 ? 1 : 3;
+        var lines = [];
+        table.querySelectorAll('tbody tr').forEach(function(tr) {
+            var td = tr.cells[colIndex];
+            if (!td || td.classList.contains('diff-imaginary')) return;
+            var pre = td.querySelector('pre');
+            if (pre) lines.push(pre.textContent);
+        });
+        navigator.clipboard.writeText(lines.join('\n')).then(function() {
+            var icon = btn.querySelector('i');
+            icon.className = 'bi bi-clipboard-check';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(function() {
+                icon.className = 'bi bi-clipboard';
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    }
+
     function submitSyncForm() {
-        // Collect checked checkboxes and add as hidden inputs to the form
         var container = document.getElementById('syncHiddenInputs');
         if (!container) return;
         container.innerHTML = '';
@@ -822,11 +958,9 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
     }
 
     function executeSync() {
-        // Close modal, show overlay, submit form
         var modal = bootstrap.Modal.getInstance(document.getElementById('confirmSyncModal'));
         if (modal) modal.hide();
 
-        // Show loading overlay
         var overlay = document.getElementById('spinnerOverlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -841,45 +975,58 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
         }
         overlay.classList.add('active');
 
-        // Submit form after modal closes
         setTimeout(function() {
             var form = document.getElementById('executeSyncForm');
             if (form) form.submit();
         }, 300);
     }
 
-    // Init on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Filtrar por Modified por defecto si hay resultados
-        if (document.querySelectorAll('.object-row').length > 0) {
-            filterStatus('Modified');
+    // ===== Keyboard navigation =====
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (!document.getElementById('splitContainer')) return;
+
+        var rows = Array.from(document.querySelectorAll('#objectGrid .object-row'))
+            .filter(function(r) { return r.style.display !== 'none'; });
+        if (rows.length === 0) return;
+
+        var currentIdx = rows.findIndex(function(r) { return r.classList.contains('selected'); });
+
+        if (e.key === 'ArrowDown' || e.key === 'j') {
+            e.preventDefault();
+            var next = currentIdx < rows.length - 1 ? currentIdx + 1 : 0;
+            rows[next].click();
+            rows[next].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp' || e.key === 'k') {
+            e.preventDefault();
+            var prev = currentIdx > 0 ? currentIdx - 1 : rows.length - 1;
+            rows[prev].click();
+            rows[prev].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'n') {
+            nextDiff();
+        } else if (e.key === 'p') {
+            prevDiff();
+        } else if (e.key === 'Escape' && expanded) {
+            toggleExpand();
+        } else if (e.key === 'f' && !expanded) {
+            toggleExpand();
         }
-        updateSyncCount();
-
-        // Auto-show error modals
-        var errorModal = document.getElementById('errorModal');
-        if (errorModal) new bootstrap.Modal(errorModal).show();
-
-        var syncErrorModal = document.getElementById('syncErrorModal');
-        if (syncErrorModal) new bootstrap.Modal(syncErrorModal).show();
     });
 
-    // --- Mode toggle ---
+    // ===== Mode toggle =====
     function setModo(modo) {
         document.getElementById('modoInput').value = modo;
         document.getElementById('selectorAmbiente').style.display = modo === 'ambiente' ? '' : 'none';
         document.getElementById('selectorVersion').style.display = modo === 'version' ? '' : 'none';
-        // Disable inputs in hidden panel to avoid duplicate name submission
-        document.querySelectorAll('#selectorAmbiente select').forEach(s => s.disabled = modo !== 'ambiente');
-        document.querySelectorAll('#selectorVersion select').forEach(s => s.disabled = modo !== 'version');
+        document.querySelectorAll('#selectorAmbiente select').forEach(function(s) { s.disabled = modo !== 'ambiente'; });
+        document.querySelectorAll('#selectorVersion select').forEach(function(s) { s.disabled = modo !== 'version'; });
     }
-    // Init on load
     setModo('@Model.Modo');
 
-    // --- Sugerir Merge (IA) ---
+    // ===== Merge suggestion (AI) =====
     function suggestMerge() {
         var objectName = document.getElementById('diffTitle').textContent;
-        if (!objectName || objectName === 'Seleccione un objeto para ver el diff') return;
+        if (!objectName || objectName === 'Seleccione un objeto') return;
 
         var modal = new bootstrap.Modal(document.getElementById('mergeModal'));
         document.getElementById('mergeLoading').style.display = '';
@@ -945,5 +1092,22 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
             }, 2000);
         });
     }
+
+    // ===== Init on page load =====
+    document.addEventListener('DOMContentLoaded', function() {
+        initLayout();
+
+        if (document.querySelectorAll('#objectGrid .object-row').length > 0) {
+            filterStatus('Modified');
+        }
+        updateSyncCount();
+        updateGridRowCount();
+
+        var errorModal = document.getElementById('errorModal');
+        if (errorModal) new bootstrap.Modal(errorModal).show();
+
+        var syncErrorModal = document.getElementById('syncErrorModal');
+        if (syncErrorModal) new bootstrap.Modal(syncErrorModal).show();
+    });
 </script>
 }

@@ -232,6 +232,7 @@
 
     function addDiffCopyButtons(diffTable) {
         if (diffTable.dataset.copyInit) return;
+        if (diffTable.closest('[data-no-copy-btns]')) return;
         diffTable.dataset.copyInit = 'true';
 
         var headers = diffTable.querySelectorAll('thead th');
