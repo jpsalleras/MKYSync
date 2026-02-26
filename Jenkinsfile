@@ -16,6 +16,18 @@ pipeline {
             }
         }
 
+        stage('Check Skip CI') {
+            steps {
+                script {
+                    def lastCommit = bat(script: '@git log -1 --pretty=%%s', returnStdout: true).trim()
+                    if (lastCommit.contains('[ci skip]')) {
+                        currentBuild.result = 'NOT_BUILT'
+                        error('Skipping build - commit contains [ci skip]')
+                    }
+                }
+            }
+        }
+
         stage('Cargar Configuracion') {
             steps {
                 script {
@@ -52,6 +64,56 @@ pipeline {
                       AppPool:  ${env.APP_POOL}
                     """
                 }
+            }
+        }
+
+        // ===================================
+        // INCREMENTAR VERSION
+        // ===================================
+        stage('Incrementar Version') {
+            when {
+                expression { env.INCREMENT_VERSION == 'true' }
+            }
+            steps {
+                powershell '''
+                    $versionUpdated = $false
+
+                    # .NET Framework: buscar AssemblyInfo.vb o .cs
+                    $assemblyInfoFiles = Get-ChildItem -Path . -Include AssemblyInfo.vb,AssemblyInfo.cs -Recurse
+                    foreach ($file in $assemblyInfoFiles) {
+                        $content = Get-Content $file.FullName -Raw
+                        $regex = 'AssemblyVersion\\("(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)"\\)'
+                        if ($content -match $regex) {
+                            $newRev = [int]$Matches[4] + 1
+                            $newVer = "$($Matches[1]).$($Matches[2]).$($Matches[3]).$newRev"
+                            $content = $content -replace 'AssemblyVersion\\("\\d+\\.\\d+\\.\\d+\\.\\d+"\\)', "AssemblyVersion(`"$newVer`")"
+                            $content = $content -replace 'AssemblyFileVersion\\("\\d+\\.\\d+\\.\\d+\\.\\d+"\\)', "AssemblyFileVersion(`"$newVer`")"
+                            Set-Content $file.FullName $content -NoNewline
+                            Write-Host "OK Version incrementada a $newVer en $($file.Name)"
+                            $versionUpdated = $true
+                        }
+                    }
+
+                    # .NET Core: buscar Version en .csproj
+                    $csprojFiles = Get-ChildItem -Path . -Filter *.csproj -Recurse
+                    foreach ($file in $csprojFiles) {
+                        [xml]$xml = Get-Content $file.FullName
+                        $versionNode = $xml.SelectSingleNode("//Version")
+                        if ($versionNode) {
+                            $parts = $versionNode.InnerText.Split('.')
+                            $parts[$parts.Length - 1] = [int]$parts[$parts.Length - 1] + 1
+                            $newVer = $parts -join '.'
+                            $versionNode.InnerText = $newVer
+                            $xml.Save($file.FullName)
+                            Write-Host "OK Version incrementada a $newVer en $($file.Name)"
+                            $versionUpdated = $true
+                        }
+                    }
+
+                    if (-not $versionUpdated) {
+                        Write-Host "WARN No se encontraron archivos de version para incrementar"
+                    }
+                '''
             }
         }
 
@@ -188,6 +250,28 @@ pipeline {
         success {
             echo "OK Deploy exitoso: https://${DOMAIN}"
             script {
+                // Commit + push version increment
+                if (env.INCREMENT_VERSION == 'true') {
+                    try {
+                        bat """
+                            git config user.email "jenkins@deploy.local"
+                            git config user.name "Jenkins Deploy"
+                            git add -A
+                            git diff --cached --quiet || git commit -m "Auto-increment version [ci skip]"
+                        """
+                        withCredentials([usernamePassword(
+                            credentialsId: env.GIT_CREDENTIALS_ID ?: '36dbc848-51a4-410d-bccc-54b7b265a9fb',
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS'
+                        )]) {
+                            bat "git push https://%GIT_USER%:%GIT_PASS%@github.com/${env.GITHUB_REPO_PATH}.git HEAD:${env.DEPLOY_BRANCH ?: 'develop'}"
+                        }
+                        echo "OK Version commit + push completado"
+                    } catch (Exception e) {
+                        echo "WARN No se pudo hacer push del incremento de version: ${e.message}"
+                    }
+                }
+                // Email notification
                 if (env.MAIL_SUCCESS?.trim()) {
                     mail to: env.MAIL_SUCCESS,
                          subject: "Deploy Exitoso: ${env.SITE_NAME}",
