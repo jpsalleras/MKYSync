@@ -4,16 +4,6 @@
 pipeline {
     agent any
 
-    environment {
-        SITE_NAME       = "${env.SITE_NAME ?: 'MiApp'}"
-        DOMAIN          = "${env.DOMAIN ?: 'miapp.local'}"
-        PHYSICAL_PATH   = "${env.PHYSICAL_PATH ?: 'C:\\inetpub\\sites\\MiApp'}"
-        APP_POOL        = "${env.APP_POOL ?: 'MiApp-Pool'}"
-        SOLUTION_FILE   = "${env.SOLUTION_FILE ?: '*.sln'}"
-        PUBLISH_PROJECT = "${env.PUBLISH_PROJECT ?: ''}"    // .csproj especifico para publish (vacio = usa SOLUTION_FILE)
-        PROJECT_TYPE    = "${env.PROJECT_TYPE ?: 'dotnet-core'}"
-    }
-
     triggers {
         githubPush()
     }
@@ -23,6 +13,53 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Cargar Configuracion') {
+            steps {
+                script {
+                    // Cargar variables desde .jenkins-env si existe en el sitio
+                    def envFile = "${env.PHYSICAL_PATH ?: ''}/.jenkins-env"
+                    if (env.PHYSICAL_PATH && fileExists(envFile)) {
+                        def props = readProperties file: envFile
+                        env.SITE_NAME       = props.SITE_NAME ?: env.SITE_NAME ?: 'MiApp'
+                        env.DOMAIN          = props.DOMAIN ?: env.DOMAIN ?: 'miapp.local'
+                        env.PHYSICAL_PATH   = props.PHYSICAL_PATH ?: env.PHYSICAL_PATH ?: 'C:\\inetpub\\sites\\MiApp'
+                        env.APP_POOL        = props.APP_POOL ?: env.APP_POOL ?: 'MiApp-Pool'
+                        env.SOLUTION_FILE   = props.SOLUTION_FILE ?: env.SOLUTION_FILE ?: '*.sln'
+                        env.PUBLISH_PROJECT = props.PUBLISH_PROJECT ?: env.PUBLISH_PROJECT ?: ''
+                        env.PROJECT_TYPE    = props.PROJECT_TYPE ?: env.PROJECT_TYPE ?: 'dotnet-core'
+                    } else {
+                        env.SITE_NAME       = env.SITE_NAME ?: 'MiApp'
+                        env.DOMAIN          = env.DOMAIN ?: 'miapp.local'
+                        env.PHYSICAL_PATH   = env.PHYSICAL_PATH ?: 'C:\\inetpub\\sites\\MiApp'
+                        env.APP_POOL        = env.APP_POOL ?: 'MiApp-Pool'
+                        env.SOLUTION_FILE   = env.SOLUTION_FILE ?: '*.sln'
+                        env.PUBLISH_PROJECT = env.PUBLISH_PROJECT ?: ''
+                        env.PROJECT_TYPE    = env.PROJECT_TYPE ?: 'dotnet-core'
+                    }
+
+                    // Resolver wildcard *.sln al archivo real
+                    if (env.SOLUTION_FILE.contains('*')) {
+                        def found = bat(script: "@dir /b ${env.SOLUTION_FILE} 2>nul", returnStdout: true).trim()
+                        if (found) {
+                            env.SOLUTION_FILE = found.split('\n')[0].trim()
+                            echo "OK Solucion encontrada: ${env.SOLUTION_FILE}"
+                        } else {
+                            error("No se encontro archivo que coincida con ${env.SOLUTION_FILE}")
+                        }
+                    }
+
+                    echo """
+                    Configuracion:
+                      Tipo:     ${env.PROJECT_TYPE}
+                      Solucion: ${env.SOLUTION_FILE}
+                      Publish:  ${env.PUBLISH_PROJECT ?: '(solucion completa)'}
+                      Sitio:    ${env.SITE_NAME}
+                      Dominio:  https://${env.DOMAIN}
+                    """
+                }
             }
         }
 
