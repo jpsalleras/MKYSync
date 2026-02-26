@@ -5,6 +5,7 @@
     // ---- SORTING ----
     function initSortable(table) {
         var headers = table.querySelectorAll('thead th');
+        var defaultTh = null, defaultIndex = -1;
         headers.forEach(function (th, index) {
             if (th.hasAttribute('data-no-sort')) return;
 
@@ -20,7 +21,19 @@
             th.addEventListener('click', function () {
                 sortTable(table, index, th);
             });
+
+            if (th.dataset.sortDefault) {
+                defaultTh = th;
+                defaultIndex = index;
+            }
         });
+
+        // Apply default sort indicator (data already ordered server-side)
+        if (defaultTh) {
+            var dir = defaultTh.dataset.sortDefault; // 'asc' or 'desc'
+            defaultTh.dataset.sortDir = dir === 'desc' ? 'asc' : 'desc'; // set opposite so sortTable toggles to desired
+            sortTable(table, defaultIndex, defaultTh);
+        }
     }
 
     function sortTable(table, colIndex, th) {

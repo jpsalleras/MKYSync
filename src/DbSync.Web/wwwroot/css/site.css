@@ -313,7 +313,7 @@
 /* ---- Horizontal mode (top/bottom) ---- */
 .split-horizontal {
     flex-direction: column;
-    height: calc(100vh - 170px);
+    height: calc(100vh - 140px);
 }
 .split-horizontal .compare-objects {
     min-height: 0;
@@ -343,7 +343,7 @@
 /* ---- Vertical mode (left/right) ---- */
 .split-vertical {
     flex-direction: row;
-    height: calc(100vh - 170px);
+    height: calc(100vh - 140px);
 }
 .split-vertical .compare-objects {
     min-width: 0;

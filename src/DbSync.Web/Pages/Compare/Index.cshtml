@@ -30,17 +30,17 @@
             <input type="hidden" name="modo" id="modoInput" value="@Model.Modo" />
 
             @* Modo Ambiente *@
-            <div class="d-flex align-items-center gap-1" id="selectorAmbiente" style="display:@(Model.Modo == "ambiente" ? "" : "none")">
+            <div class="d-flex align-items-center gap-1 @(Model.Modo != "ambiente" ? "d-none" : "")" id="selectorAmbiente">
                 <select name="clienteId" asp-items="Model.ClientesList" class="form-select form-select-sm" id="selClienteAmb" title="Cliente" style="min-width:160px">
                     <option value="">-- Cliente --</option>
                 </select>
-                <select name="origen" class="form-select form-select-sm" id="selOrigen" title="Origen" style="width:65px">
+                <select name="origen" class="form-select form-select-sm" id="selOrigen" title="Origen" style="width:80px">
                     <option value="DEV" selected="@(Model.Origen == "DEV")">DEV</option>
                     <option value="QA" selected="@(Model.Origen == "QA")">QA</option>
                     <option value="PR" selected="@(Model.Origen == "PR")">PR</option>
                 </select>
                 <i class="bi bi-arrow-right text-muted"></i>
-                <select name="destino" class="form-select form-select-sm" id="selDestinoAmb" title="Destino" style="width:65px">
+                <select name="destino" class="form-select form-select-sm" id="selDestinoAmb" title="Destino" style="width:80px">
                     <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
                     <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
                     <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
@@ -54,7 +54,7 @@
             </div>
 
             @* Modo Version *@
-            <div class="d-flex align-items-center gap-1" id="selectorVersion" style="display:@(Model.Modo == "version" ? "" : "none")">
+            <div class="d-flex align-items-center gap-1 @(Model.Modo != "version" ? "d-none" : "")" id="selectorVersion">
                 <select name="versionId" class="form-select form-select-sm" id="selVersionId" title="Version Base" style="min-width:160px">
                     <option value="">-- Version --</option>
                     @foreach (var v in Model.VersionesList)
@@ -66,7 +66,7 @@
                     <option value="">-- Cliente --</option>
                 </select>
                 <i class="bi bi-arrow-right text-muted"></i>
-                <select name="destino" class="form-select form-select-sm" id="selDestinoVer" title="Destino" style="width:65px">
+                <select name="destino" class="form-select form-select-sm" id="selDestinoVer" title="Destino" style="width:80px">
                     <option value="DEV" selected="@(Model.Destino == "DEV")">DEV</option>
                     <option value="QA" selected="@(Model.Destino == "QA")">QA</option>
                     <option value="PR" selected="@(Model.Destino == "PR")">PR</option>
@@ -269,18 +269,28 @@
                 </table>
             </div>
 
-            <details class="mb-3">
-                <summary class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-code-square"></i> Ver script SQL completo
-                </summary>
-                <div class="position-relative mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-1"
-                            onclick="copyScript(this)" title="Copiar al portapapeles">
-                        <i class="bi bi-clipboard"></i>
+            <div class="mb-3" id="scriptSection">
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleScript()" id="btnToggleScript">
+                        <i class="bi bi-code-square"></i> Ver script SQL
                     </button>
-                    <pre id="scriptPreviewCode" class="border rounded p-2 pe-5" style="max-height:300px; overflow:auto; font-size:0.75rem; background:#f8f9fa;">@Model.ScriptPreview</pre>
+                    <div id="scriptToolbar" class="btn-group btn-group-sm" style="display:none">
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyScript(this)" title="Copiar al portapapeles">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="toggleScriptExpand()" id="btnScriptExpand" title="Expandir">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
                 </div>
-            </details>
+                <div id="scriptPanel" style="display:none; position:relative;">
+                    <button type="button" id="btnScriptClose" class="btn btn-sm btn-outline-light position-absolute" style="display:none; top:8px; right:8px; z-index:10000; opacity:0.8;"
+                            onclick="toggleScriptExpand()" title="Cerrar (Esc)">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
+                    <pre id="scriptPreviewCode" class="border rounded p-2" style="max-height: calc(100vh - 350px); overflow:auto; font-size:0.75rem; background:#1e1e1e; color:#d4d4d4; tab-size:4;">@Model.ScriptPreview</pre>
+                </div>
+            </div>
 
             <div class="d-flex gap-2">
                 @if (Model.CanExecute)
@@ -448,7 +458,7 @@
                             <th>Objeto</th>
                             <th style="width:70px">Estado</th>
                             <th style="width:80px" data-sort-type="number" class="col-wide-only">+/-</th>
-                            <th style="width:115px" data-sort-type="date" class="col-wide-only">Modificado</th>
+                            <th style="width:115px" data-sort-type="number" data-sort-default="desc" class="col-wide-only">Modificado</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -916,6 +926,57 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
         });
     }
 
+    var scriptExpanded = false;
+    function toggleScript() {
+        var panel = document.getElementById('scriptPanel');
+        var toolbar = document.getElementById('scriptToolbar');
+        var btn = document.getElementById('btnToggleScript');
+        var visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : '';
+        toolbar.style.display = visible ? 'none' : '';
+        btn.innerHTML = visible
+            ? '<i class="bi bi-code-square"></i> Ver script SQL'
+            : '<i class="bi bi-code-square"></i> Ocultar script';
+    }
+
+    function toggleScriptExpand() {
+        var pre = document.getElementById('scriptPreviewCode');
+        var btn = document.getElementById('btnScriptExpand');
+        var closeBtn = document.getElementById('btnScriptClose');
+        scriptExpanded = !scriptExpanded;
+        if (scriptExpanded) {
+            pre.style.maxHeight = 'none';
+            pre.style.position = 'fixed';
+            pre.style.top = '0';
+            pre.style.left = '0';
+            pre.style.width = '100%';
+            pre.style.height = '100%';
+            pre.style.zIndex = '9999';
+            pre.style.borderRadius = '0';
+            pre.style.margin = '0';
+            btn.innerHTML = '<i class="bi bi-fullscreen-exit"></i>';
+            closeBtn.style.display = '';
+        } else {
+            pre.style.maxHeight = 'calc(100vh - 350px)';
+            pre.style.position = '';
+            pre.style.top = '';
+            pre.style.left = '';
+            pre.style.width = '';
+            pre.style.height = '';
+            pre.style.zIndex = '';
+            pre.style.borderRadius = '';
+            pre.style.margin = '';
+            btn.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>';
+            closeBtn.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && scriptExpanded) {
+            toggleScriptExpand();
+        }
+    });
+
     // Copy source (side=0) or target (side=1) from the current diff table
     function copyDiffSide(side, btn) {
         var table = document.querySelector('#diffContainer .diff-table');
@@ -1016,8 +1077,8 @@ else if (Model.ErrorMessage == null && Model.SyncErrorMessage == null && !Model.
     // ===== Mode toggle =====
     function setModo(modo) {
         document.getElementById('modoInput').value = modo;
-        document.getElementById('selectorAmbiente').style.display = modo === 'ambiente' ? '' : 'none';
-        document.getElementById('selectorVersion').style.display = modo === 'version' ? '' : 'none';
+        document.getElementById('selectorAmbiente').classList.toggle('d-none', modo !== 'ambiente');
+        document.getElementById('selectorVersion').classList.toggle('d-none', modo !== 'version');
         document.querySelectorAll('#selectorAmbiente select').forEach(function(s) { s.disabled = modo !== 'ambiente'; });
         document.querySelectorAll('#selectorVersion select').forEach(function(s) { s.disabled = modo !== 'version'; });
     }

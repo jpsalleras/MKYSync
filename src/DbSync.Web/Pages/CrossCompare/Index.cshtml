@@ -5,74 +5,63 @@
     ViewData["Title"] = "Comparar entre Clientes";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="mb-0"><i class="bi bi-arrow-left-right"></i> Comparar entre Clientes</h2>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()">
-        <i class="bi bi-arrow-left"></i> Volver
-    </button>
-</div>
+@* ===== Compact Selector Toolbar ===== *@
+<div class="compare-toolbar" id="compareToolbar">
+    <div class="d-flex align-items-center gap-2">
+        <h5 class="mb-0 me-1" style="font-size:0.95rem;white-space:nowrap">
+            <i class="bi bi-people"></i> Cruzar
+        </h5>
 
-<!-- Selector -->
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Cliente A</label>
-                <select name="clienteIdA" class="form-select">
-                    <option value="">-- Seleccionar --</option>
-                    @foreach (var c in Model.ClientesList)
-                    {
-                        <option value="@c.Value" selected="@(c.Value == Model.ClienteIdA?.ToString())">@c.Text</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">Amb. A</label>
-                <select name="ambienteA" class="form-select">
-                    <option value="DEV" selected="@(Model.AmbienteA == "DEV")">DEV</option>
-                    <option value="QA" selected="@(Model.AmbienteA == "QA")">QA</option>
-                    <option value="PR" selected="@(Model.AmbienteA == "PR")">PR</option>
-                </select>
-            </div>
-            <div class="col-md-1 text-center align-self-center">
-                <i class="bi bi-arrow-left-right fs-4 text-muted"></i>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Cliente B</label>
-                <select name="clienteIdB" class="form-select">
-                    <option value="">-- Seleccionar --</option>
-                    @foreach (var c in Model.ClientesList)
-                    {
-                        <option value="@c.Value" selected="@(c.Value == Model.ClienteIdB?.ToString())">@c.Text</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">Amb. B</label>
-                <select name="ambienteB" class="form-select">
-                    <option value="DEV" selected="@(Model.AmbienteB == "DEV")">DEV</option>
-                    <option value="QA" selected="@(Model.AmbienteB == "QA")">QA</option>
-                    <option value="PR" selected="@(Model.AmbienteB == "PR")">PR</option>
-                </select>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">Tipo</label>
-                <select name="tipo" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="SP" selected="@(Model.Tipo == "SP")">SP</option>
-                    <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
-                    <option value="FN" selected="@(Model.Tipo == "FN")">Func.</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100" data-loading="Comparando clientes..." data-overlay>
-                    <i class="bi bi-search"></i> Comparar
-                </button>
-            </div>
+        <form method="get" id="crossCompareForm" class="d-flex align-items-center gap-1 mb-0">
+            <select name="clienteIdA" class="form-select form-select-sm" title="Cliente A" style="min-width:130px">
+                <option value="">-- Cliente A --</option>
+                @foreach (var c in Model.ClientesList)
+                {
+                    <option value="@c.Value" selected="@(c.Value == Model.ClienteIdA?.ToString())">@c.Text</option>
+                }
+            </select>
+            <select name="ambienteA" class="form-select form-select-sm" title="Ambiente A" style="width:70px">
+                <option value="DEV" selected="@(Model.AmbienteA == "DEV")">DEV</option>
+                <option value="QA" selected="@(Model.AmbienteA == "QA")">QA</option>
+                <option value="PR" selected="@(Model.AmbienteA == "PR")">PR</option>
+            </select>
+            <i class="bi bi-arrow-left-right text-muted" style="font-size:0.8rem"></i>
+            <select name="clienteIdB" class="form-select form-select-sm" title="Cliente B" style="min-width:130px">
+                <option value="">-- Cliente B --</option>
+                @foreach (var c in Model.ClientesList)
+                {
+                    <option value="@c.Value" selected="@(c.Value == Model.ClienteIdB?.ToString())">@c.Text</option>
+                }
+            </select>
+            <select name="ambienteB" class="form-select form-select-sm" title="Ambiente B" style="width:70px">
+                <option value="DEV" selected="@(Model.AmbienteB == "DEV")">DEV</option>
+                <option value="QA" selected="@(Model.AmbienteB == "QA")">QA</option>
+                <option value="PR" selected="@(Model.AmbienteB == "PR")">PR</option>
+            </select>
+            <select name="tipo" class="form-select form-select-sm" title="Tipo" style="width:80px">
+                <option value="">Todos</option>
+                <option value="SP" selected="@(Model.Tipo == "SP")">SP</option>
+                <option value="VIEW" selected="@(Model.Tipo == "VIEW")">Vistas</option>
+                <option value="FN" selected="@(Model.Tipo == "FN")">Func.</option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" data-loading="Comparando..." data-overlay>
+                <i class="bi bi-search"></i>
+            </button>
         </form>
+
+        <div class="ms-auto d-flex gap-1">
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-layout-toggle" id="btnLayoutToggle"
+                    onclick="toggleLayout()" title="Cambiar disposicion">
+                <i class="bi bi-layout-split" id="layoutIcon"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()" title="Volver">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+        </div>
     </div>
 </div>
 
+@* ===== Error Modals ===== *@
 @if (Model.ErrorMessage != null)
 {
     <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
@@ -245,18 +234,28 @@
                 </table>
             </div>
 
-            <details class="mb-3">
-                <summary class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-code-square"></i> Ver script SQL completo
-                </summary>
-                <div class="position-relative mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-1"
-                            onclick="copyScript(this)" title="Copiar al portapapeles">
-                        <i class="bi bi-clipboard"></i>
+            <div class="mb-3" id="scriptSection">
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleScript()" id="btnToggleScript">
+                        <i class="bi bi-code-square"></i> Ver script SQL
                     </button>
-                    <pre id="scriptPreviewCode" class="border rounded p-2 pe-5" style="max-height:300px; overflow:auto; font-size:0.75rem; background:#f8f9fa;">@Model.ScriptPreview</pre>
+                    <div id="scriptToolbar" class="btn-group btn-group-sm" style="display:none">
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyScript(this)" title="Copiar al portapapeles">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="toggleScriptExpand()" id="btnScriptExpand" title="Expandir">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
                 </div>
-            </details>
+                <div id="scriptPanel" style="display:none; position:relative;">
+                    <button type="button" id="btnScriptClose" class="btn btn-sm btn-outline-light position-absolute" style="display:none; top:8px; right:8px; z-index:10000; opacity:0.8;"
+                            onclick="toggleScriptExpand()" title="Cerrar (Esc)">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
+                    <pre id="scriptPreviewCode" class="border rounded p-2" style="max-height: calc(100vh - 350px); overflow:auto; font-size:0.75rem; background:#1e1e1e; color:#d4d4d4; tab-size:4;">@Model.ScriptPreview</pre>
+                </div>
+            </div>
 
             <div class="d-flex gap-2">
                 @if (Model.CanExecute)
@@ -344,29 +343,52 @@
     var labelB = $"{r.ClienteCodigoB}/{r.AmbienteB}";
     var hasDifferences = r.TotalModified > 0 || r.TotalOnlyInA > 0 || r.TotalOnlyInB > 0;
 
-    <!-- Resumen -->
-    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
-        <span class="badge bg-success stat-badge" role="button" onclick="filterStatus('Equal')">
-            @r.TotalEqual Iguales
-        </span>
-        <span class="badge bg-warning text-dark stat-badge" role="button" onclick="filterStatus('Modified')">
-            @r.TotalModified Diferentes
-        </span>
-        <span class="badge bg-primary stat-badge" role="button" onclick="filterStatus('OnlyInSource')">
-            @r.TotalOnlyInA Solo @labelA
-        </span>
-        <span class="badge bg-danger stat-badge" role="button" onclick="filterStatus('OnlyInTarget')">
-            @r.TotalOnlyInB Solo @labelB
-        </span>
-        <span class="text-muted small ms-auto">
-            @r.TotalObjects objetos en @r.Duration.TotalSeconds.ToString("F1")s
-            (@r.TotalSnapshotsA en @labelA, @r.TotalSnapshotsB en @labelB)
-            <a href="#" onclick="filterStatus(''); return false;" class="ms-2">Mostrar todos</a>
-        </span>
+    @* ===== Filter badges + Sync toolbar (merged into one bar) ===== *@
+    <div class="compare-filters-bar" id="filtersBar">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="badge bg-success stat-badge" role="button" onclick="filterStatus('Equal')">
+                @r.TotalEqual Iguales
+            </span>
+            <span class="badge bg-warning text-dark stat-badge" role="button" onclick="filterStatus('Modified')">
+                @r.TotalModified Diferentes
+            </span>
+            <span class="badge bg-primary stat-badge" role="button" onclick="filterStatus('OnlyInSource')">
+                @r.TotalOnlyInA Solo @labelA
+            </span>
+            <span class="badge bg-danger stat-badge" role="button" onclick="filterStatus('OnlyInTarget')">
+                @r.TotalOnlyInB Solo @labelB
+            </span>
+
+            @{
+                var showCheckboxes = Model.CanSync && hasDifferences
+                    && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync;
+            }
+
+            @if (showCheckboxes)
+            {
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="selectAllSync(true)" style="font-size:0.75rem">
+                    Todos
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="selectAllSync(false)" style="font-size:0.75rem">
+                    Ninguno
+                </button>
+                <span class="text-muted small" id="syncSelectionCount"></span>
+                <button type="button" class="btn btn-warning btn-sm fw-semibold shadow-sm"
+                        data-loading="Generando preview..." data-overlay
+                        id="btnPreviewSync" onclick="submitSyncForm()" style="font-size:0.78rem">
+                    <i class="bi bi-arrow-right-circle-fill"></i> Sync (@labelA &rarr; @labelB)
+                </button>
+            }
+
+            <span class="text-muted small ms-auto">
+                @r.TotalObjects obj en @r.Duration.TotalSeconds.ToString("F1")s
+                (@r.TotalSnapshotsA en @labelA, @r.TotalSnapshotsB en @labelB)
+            </span>
+        </div>
     </div>
 
-    @* ===== Toolbar de sync + formulario oculto ===== *@
-    @if (Model.CanSync && hasDifferences && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync)
+    @if (showCheckboxes)
     {
         <form method="post" asp-page-handler="PreviewSync" id="syncForm">
             <input type="hidden" name="ClienteIdA" value="@Model.ClienteIdA" />
@@ -376,139 +398,151 @@
             <input type="hidden" name="Tipo" value="@Model.Tipo" />
             <div id="syncHiddenInputs"></div>
         </form>
-
-        <div class="card mb-2 border-info" id="syncToolbar">
-            <div class="card-body py-2 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(true)">
-                        Seleccionar todos
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSync(false)">
-                        Deseleccionar todos
-                    </button>
-                    <span class="text-muted small" id="syncSelectionCount"></span>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-warning btn-sm"
-                            data-loading="Generando preview..." data-overlay
-                            id="btnPreviewSync" onclick="submitSyncForm()">
-                        <i class="bi bi-arrow-right-circle"></i> Previsualizar (@labelA &rarr; @labelB)
-                    </button>
-                </div>
-            </div>
-        </div>
     }
 
-    <!-- Lista de objetos + Splitter + Diff -->
-    <div class="split-container" id="splitContainer">
-        <div class="split-panel" id="objectListPanel" style="width:35%">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Objetos</span>
-                    <input type="text" id="searchBox" class="form-control form-control-sm w-50" placeholder="Buscar..." />
-                </div>
-                <div class="list-group list-group-flush" style="overflow-y: auto; flex: 1;">
-                    @{
-                        var showCheckboxes = Model.CanSync && hasDifferences
-                            && !Model.MostrarPreviewSync && !Model.MostrarResultadosSync;
-                    }
-                    @foreach (var item in r.Items.Where(i => i.Status != CompareStatus.Equal))
-                    {
-                        var statusBadge = item.Status switch
-                        {
-                            CompareStatus.Modified => "badge-modified",
-                            CompareStatus.OnlyInSource => "badge-only-source",
-                            CompareStatus.OnlyInTarget => "badge-only-target",
-                            _ => ""
-                        };
-                        var statusText = item.Status switch
-                        {
-                            CompareStatus.Modified => "DIFF",
-                            CompareStatus.OnlyInSource => $"SOLO {labelA}",
-                            CompareStatus.OnlyInTarget => $"SOLO {labelB}",
-                            _ => ""
-                        };
+    @* ===== Split Layout (dual mode: horizontal / vertical) ===== *@
+    <div id="splitContainer" class="compare-split split-horizontal">
 
-                        <a href="#" class="list-group-item list-group-item-action object-row"
-                           data-status="@item.Status" data-name="@item.ObjectFullName"
-                           data-snapshot-a="@(item.SnapshotIdA?.ToString() ?? "")"
-                           data-snapshot-b="@(item.SnapshotIdB?.ToString() ?? "")"
-                           onclick="showDiff(this); return false;">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    @if (showCheckboxes)
-                                    {
-                                        var isDisabled = item.IsCustomA || item.IsCustomB;
-                                        <input type="checkbox" class="form-check-input me-2 sync-checkbox"
+        @* --- Object Panel --- *@
+        <div id="objectPanel" class="compare-objects" style="height:38%">
+            <div class="object-grid-toolbar">
+                <input type="text" id="searchBox" class="form-control form-control-sm" placeholder="Buscar objeto..." />
+                <span id="gridRowCount" class="small text-muted"></span>
+            </div>
+            <div class="object-grid-scroll">
+                <table id="objectGrid" class="table table-sm table-hover mb-0 sortable-table">
+                    <thead class="table-light">
+                        <tr>
+                            @if (showCheckboxes)
+                            {
+                                <th style="width:28px" data-no-sort>
+                                    <input type="checkbox" class="form-check-input" id="chkSelectAll"
+                                           onclick="selectAllSync(this.checked)" title="Seleccionar todos" />
+                                </th>
+                            }
+                            <th style="width:28px" data-no-sort class="col-wide-only text-center">Tipo</th>
+                            <th>Objeto</th>
+                            <th style="width:70px">Estado</th>
+                            <th style="width:80px" data-sort-type="number" class="col-wide-only">+/-</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in r.Items.Where(i => i.Status != CompareStatus.Equal))
+                        {
+                            var statusBadge = item.Status switch
+                            {
+                                CompareStatus.Modified => "badge-modified",
+                                CompareStatus.OnlyInSource => "badge-only-source",
+                                CompareStatus.OnlyInTarget => "badge-only-target",
+                                _ => ""
+                            };
+                            var statusText = item.Status switch
+                            {
+                                CompareStatus.Modified => "DIFF",
+                                CompareStatus.OnlyInSource => $"SOLO {labelA}",
+                                CompareStatus.OnlyInTarget => $"SOLO {labelB}",
+                                _ => ""
+                            };
+                            var typeLabel = item.ObjectType;
+                            var typeIcon = item.ObjectType switch
+                            {
+                                "P" => "bi-filetype-sql",
+                                "V" => "bi-table",
+                                _ => "bi-braces"
+                            };
+
+                            <tr class="object-row" data-status="@item.Status" data-name="@item.ObjectFullName"
+                                data-snapshot-a="@(item.SnapshotIdA?.ToString() ?? "")"
+                                data-snapshot-b="@(item.SnapshotIdB?.ToString() ?? "")"
+                                onclick="showDiff(this)">
+                                @if (showCheckboxes)
+                                {
+                                    <td class="text-center" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="form-check-input sync-checkbox"
                                                data-object-name="@item.ObjectFullName"
-                                               @(isDisabled ? "disabled" : "")
-                                               onclick="event.stopPropagation(); updateSyncCount();" />
-                                    }
+                                               @(item.IsCustomA || item.IsCustomB ? "disabled" : "")
+                                               onchange="updateSyncCount()" />
+                                    </td>
+                                }
+                                <td class="text-center col-wide-only" title="@typeLabel">
+                                    <i class="bi @typeIcon text-muted"></i>
+                                </td>
+                                <td>
                                     <code class="small">@item.ObjectFullName</code>
                                     @if (item.IsCustomA || item.IsCustomB)
                                     {
-                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.65rem">CUSTOM</span>
+                                        <span class="badge badge-custom text-white ms-1" style="font-size:0.55rem">C</span>
                                     }
-                                </div>
-                                <div>
-                                    <span class="badge @statusBadge text-white">@statusText</span>
-                                    <span class="badge bg-light text-dark">@item.ObjectType</span>
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                @if (item.Status == CompareStatus.Modified && item.LinesAdded + item.LinesRemoved > 0)
-                                {
-                                    <text>+@item.LinesAdded / -@item.LinesRemoved lineas</text>
-                                }
-                                else if (item.Status == CompareStatus.OnlyInSource)
-                                {
-                                    <text>Solo en @labelA</text>
-                                }
-                                else if (item.Status == CompareStatus.OnlyInTarget)
-                                {
-                                    <text>Solo en @labelB</text>
-                                }
-                            </small>
-                        </a>
-                    }
+                                    <span class="col-narrow-only text-muted" style="font-size:0.7rem">
+                                        &mdash; @typeLabel
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @statusBadge text-white" style="font-size:0.6rem">@statusText</span>
+                                </td>
+                                <td class="small text-muted col-wide-only" style="white-space:nowrap" data-sort-value="@(item.LinesAdded + item.LinesRemoved)">
+                                    @if (item.Status == CompareStatus.Modified)
+                                    {
+                                        <span class="text-success">+@item.LinesAdded</span>
+                                        <span class="text-danger">-@item.LinesRemoved</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* --- Gutter (horizontal bar / vertical divider) --- *@
+        <div id="splitGutter" class="compare-gutter">
+            <div id="gutterBar" class="gutter-bar">
+                <span id="diffTitle" class="gutter-object-name">Seleccione un objeto</span>
+                <div id="diffControls" class="gutter-controls">
+                    <span id="diffStats" class="small text-muted"></span>
+                    <div class="btn-group btn-group-sm" id="grpCopyMerge" style="display:none">
+                        <button type="button" class="btn btn-outline-secondary" id="btnCopySource"
+                                onclick="copyDiffSide(0, this)" title="Copiar @labelA">
+                            <i class="bi bi-clipboard"></i> @labelA
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnCopyTarget"
+                                onclick="copyDiffSide(1, this)" title="Copiar @labelB">
+                            <i class="bi bi-clipboard"></i> @labelB
+                        </button>
+                        @if (Model.MergeEnabled)
+                        {
+                            <button type="button" class="btn btn-outline-primary" id="btnSuggestMerge"
+                                    onclick="suggestMerge()" title="Sugerir merge con IA" style="display:none">
+                                <i class="bi bi-stars"></i> Merge
+                            </button>
+                        }
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" id="btnPrevDiff" onclick="prevDiff()" title="Diferencia anterior" disabled>
+                            <i class="bi bi-chevron-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnDiffCount" disabled style="font-size:0.7rem;min-width:50px">
+                            0/0
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnNextDiff" onclick="nextDiff()" title="Diferencia siguiente" disabled>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnToggleExpand" onclick="toggleExpand()" title="Expandir/Contraer">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="split-gutter" id="splitGutter"></div>
-
-        <div class="split-panel" id="diffPanel" style="flex:1">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center" id="diffHeader">
-                    <span id="diffTitle">Seleccione un objeto para ver el diff</span>
-                    <div class="d-flex align-items-center gap-2">
-                        @if (Model.MergeEnabled)
-                        {
-                            <button type="button" class="btn btn-sm btn-primary" id="btnSuggestMerge"
-                                    onclick="suggestMerge()" title="Sugerir merge con IA" style="display:none">
-                                <i class="bi bi-stars"></i> Sugerir Merge
-                            </button>
-                        }
-                        <span id="diffStats" class="small text-muted"></span>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" id="btnPrevDiff" onclick="prevDiff()" title="Diferencia anterior" disabled>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnDiffCount" disabled style="font-size:0.7rem;min-width:50px">
-                                0/0
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnNextDiff" onclick="nextDiff()" title="Diferencia siguiente" disabled>
-                                <i class="bi bi-chevron-down"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnToggleExpand" onclick="toggleExpand()" title="Expandir/Contraer">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="diff-container" id="diffContainer" style="overflow: auto; flex: 1;">
-                    <p class="text-muted p-3">Haga clic en un objeto de la lista para ver las diferencias.</p>
-                </div>
+        @* --- Diff Panel --- *@
+        <div id="diffPanel" class="compare-diff" style="flex:1">
+            @* Header shown only in vertical mode *@
+            <div id="diffHeaderV" class="diff-header-v">
+                @* Controls will be moved here via JS in vertical mode *@
+            </div>
+            <div class="diff-container" id="diffContainer" data-no-copy-btns style="overflow: auto; flex: 1;">
+                <p class="text-muted p-3">Seleccione un objeto para ver las diferencias.</p>
             </div>
         </div>
     </div>
@@ -555,32 +589,86 @@
 
 @section Scripts {
 <script>
-    // Cache de diffs ya cargados
+    // ===== Diff cache (AJAX-loaded) =====
     var diffCache = {};
 
+    // ===== Layout management =====
+    var currentLayout = localStorage.getItem('crossCompareLayout') || 'horizontal';
+
+    function initLayout() {
+        var container = document.getElementById('splitContainer');
+        if (!container) return;
+        applyLayout(currentLayout);
+    }
+
+    function applyLayout(layout) {
+        var container = document.getElementById('splitContainer');
+        if (!container) return;
+        currentLayout = layout;
+
+        var objectPanel = document.getElementById('objectPanel');
+        var controls = document.getElementById('diffControls');
+        var diffTitle = document.getElementById('diffTitle');
+        var gutterBar = document.getElementById('gutterBar');
+        var diffHeaderV = document.getElementById('diffHeaderV');
+        var icon = document.getElementById('layoutIcon');
+
+        if (layout === 'horizontal') {
+            container.classList.remove('split-vertical');
+            container.classList.add('split-horizontal');
+            objectPanel.style.height = objectPanel.style.height || '38%';
+            objectPanel.style.width = '';
+            // Move controls to gutter bar
+            if (gutterBar && controls) gutterBar.appendChild(controls);
+            if (gutterBar && diffTitle) gutterBar.insertBefore(diffTitle, controls);
+            if (icon) icon.className = 'bi bi-layout-sidebar';
+        } else {
+            container.classList.remove('split-horizontal');
+            container.classList.add('split-vertical');
+            objectPanel.style.width = objectPanel.style.width || '35%';
+            objectPanel.style.height = '';
+            // Move controls to diff header
+            if (diffHeaderV && controls) diffHeaderV.appendChild(controls);
+            if (diffHeaderV && diffTitle) diffHeaderV.insertBefore(diffTitle, controls);
+            if (icon) icon.className = 'bi bi-layout-split';
+        }
+    }
+
+    function toggleLayout() {
+        var newLayout = currentLayout === 'horizontal' ? 'vertical' : 'horizontal';
+        applyLayout(newLayout);
+        localStorage.setItem('crossCompareLayout', newLayout);
+    }
+
+    // ===== Show diff (AJAX) =====
     function showDiff(element) {
         var name = element.dataset.name;
         var idA = element.dataset.snapshotA;
         var idB = element.dataset.snapshotB;
 
-        // Marcar seleccionado
-        document.querySelectorAll('.object-row').forEach(r => r.classList.remove('selected'));
-        element.classList.add('selected');
+        var titleEl = document.getElementById('diffTitle');
+        if (titleEl) titleEl.textContent = name;
 
-        document.getElementById('diffTitle').textContent = name;
         document.getElementById('diffStats').textContent = '';
 
-        // Mostrar/ocultar boton Sugerir Merge (solo para objetos Modified con ambos snapshots)
+        // Mark selected row
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(r) { r.classList.remove('selected'); });
+        element.classList.add('selected');
+
+        // Show/hide copy/merge buttons
+        var grpCopyMerge = document.getElementById('grpCopyMerge');
         var mergeBtn = document.getElementById('btnSuggestMerge');
-        if (mergeBtn) {
-            var isModified = element.dataset.status === 'Modified';
-            mergeBtn.style.display = (isModified && idA && idB) ? '' : 'none';
-        }
 
         if (!idA || !idB) {
             document.getElementById('diffContainer').innerHTML =
                 '<p class="text-muted p-3">Este objeto solo existe en un lado, no hay diff disponible.</p>';
+            if (grpCopyMerge) grpCopyMerge.style.display = 'none';
             return;
+        }
+
+        if (grpCopyMerge) grpCopyMerge.style.display = '';
+        if (mergeBtn) {
+            mergeBtn.style.display = (element.dataset.status === 'Modified') ? '' : 'none';
         }
 
         var cacheKey = idA + '-' + idB;
@@ -590,7 +678,7 @@
             return;
         }
 
-        // Cargar diff via AJAX
+        // Load diff via AJAX
         document.getElementById('diffContainer').innerHTML =
             '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Cargando diff...</p></div>';
 
@@ -618,7 +706,7 @@
         initDiffNav();
     }
 
-    // --- Navegacion entre diferencias ---
+    // ===== Diff navigation =====
     var diffRows = [];
     var diffIndex = -1;
 
@@ -657,85 +745,106 @@
 
     function updateDiffNavUI() {
         var total = diffRows.length;
-        document.getElementById('btnPrevDiff').disabled = total === 0;
-        document.getElementById('btnNextDiff').disabled = total === 0;
-        document.getElementById('btnDiffCount').textContent = total > 0 ? (diffIndex + 1) + '/' + total : '0/0';
+        var prev = document.getElementById('btnPrevDiff');
+        var next = document.getElementById('btnNextDiff');
+        var count = document.getElementById('btnDiffCount');
+        if (prev) prev.disabled = total === 0;
+        if (next) next.disabled = total === 0;
+        if (count) count.textContent = total > 0 ? (diffIndex + 1) + '/' + total : '0/0';
     }
 
+    // ===== Expand / Contract =====
     var expanded = false;
     function toggleExpand() {
-        var listPanel = document.getElementById('objectListPanel');
+        var objectPanel = document.getElementById('objectPanel');
         var gutter = document.getElementById('splitGutter');
         var splitContainer = document.getElementById('splitContainer');
         var icon = document.querySelector('#btnToggleExpand i');
-        var filters = document.querySelector('.card.mb-3');
-        var titleRow = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-2');
-        var statBadges = document.querySelector('.d-flex.align-items-center.flex-wrap.gap-2.mb-2');
-        var syncToolbar = document.getElementById('syncToolbar');
+        var toolbar = document.getElementById('compareToolbar');
+        var filtersBar = document.getElementById('filtersBar');
+        var syncForm = document.getElementById('syncForm');
+
         expanded = !expanded;
         if (expanded) {
-            listPanel.style.display = 'none';
-            gutter.style.display = 'none';
-            icon.className = 'bi bi-arrows-angle-contract';
-            if (filters) filters.style.display = 'none';
-            if (titleRow) titleRow.style.display = 'none';
-            if (statBadges) statBadges.style.display = 'none';
-            if (syncToolbar) syncToolbar.style.display = 'none';
-            splitContainer.style.height = 'calc(100vh - 80px)';
+            if (objectPanel) objectPanel.style.display = 'none';
+            if (currentLayout === 'vertical' && gutter) gutter.style.display = 'none';
+            if (icon) icon.className = 'bi bi-arrows-angle-contract';
+            if (toolbar) toolbar.style.display = 'none';
+            if (filtersBar) filtersBar.style.display = 'none';
+            if (syncForm) syncForm.style.display = 'none';
+            if (splitContainer) splitContainer.style.height = 'calc(100vh - 50px)';
         } else {
-            listPanel.style.display = '';
-            gutter.style.display = '';
-            icon.className = 'bi bi-arrows-fullscreen';
-            if (filters) filters.style.display = '';
-            if (titleRow) titleRow.style.display = '';
-            if (statBadges) statBadges.style.display = '';
-            if (syncToolbar) syncToolbar.style.display = '';
-            splitContainer.style.height = '';
+            if (objectPanel) objectPanel.style.display = '';
+            if (gutter) gutter.style.display = '';
+            if (icon) icon.className = 'bi bi-arrows-fullscreen';
+            if (toolbar) toolbar.style.display = '';
+            if (filtersBar) filtersBar.style.display = '';
+            if (syncForm) syncForm.style.display = '';
+            if (splitContainer) splitContainer.style.height = '';
         }
     }
 
+    // ===== Filtering =====
     function filterStatus(status) {
-        document.querySelectorAll('.object-row').forEach(function(row) {
-            if (status === '') {
-                row.style.display = '';
-            } else {
-                row.style.display = (row.dataset.status === status) ? '' : 'none';
-            }
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(row) {
+            row.style.display = (row.dataset.status === status || status === '') ? '' : 'none';
         });
         updateSyncCount();
+        updateGridRowCount();
     }
 
-    // Busqueda
+    function updateGridRowCount() {
+        var visible = document.querySelectorAll('#objectGrid .object-row:not([style*="display: none"])').length;
+        var total = document.querySelectorAll('#objectGrid .object-row').length;
+        var el = document.getElementById('gridRowCount');
+        if (el) el.textContent = visible === total ? total + ' objetos' : visible + ' de ' + total;
+    }
+
+    // Search
     document.getElementById('searchBox')?.addEventListener('input', function(e) {
         var term = e.target.value.toLowerCase();
-        document.querySelectorAll('.object-row').forEach(function(row) {
+        document.querySelectorAll('#objectGrid .object-row').forEach(function(row) {
             row.style.display = row.dataset.name.toLowerCase().includes(term) ? '' : 'none';
         });
         updateSyncCount();
+        updateGridRowCount();
     });
 
-    // Splitter drag
+    // ===== Splitter drag (adapts to layout mode) =====
     (function() {
         var gutter = document.getElementById('splitGutter');
         var container = document.getElementById('splitContainer');
-        var leftPanel = document.getElementById('objectListPanel');
-        if (!gutter || !container || !leftPanel) return;
+        var objectPanel = document.getElementById('objectPanel');
+        if (!gutter || !container || !objectPanel) return;
         var dragging = false;
+
         gutter.addEventListener('mousedown', function(e) {
             e.preventDefault();
             dragging = true;
-            document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
+            document.body.style.cursor = currentLayout === 'horizontal' ? 'row-resize' : 'col-resize';
         });
+
         document.addEventListener('mousemove', function(e) {
             if (!dragging) return;
             var rect = container.getBoundingClientRect();
-            var x = e.clientX - rect.left;
-            var pct = (x / rect.width) * 100;
-            if (pct < 15) pct = 15;
-            if (pct > 70) pct = 70;
-            leftPanel.style.width = pct + '%';
+
+            if (currentLayout === 'horizontal') {
+                var y = e.clientY - rect.top;
+                var pct = (y / rect.height) * 100;
+                if (pct < 15) pct = 15;
+                if (pct > 75) pct = 75;
+                objectPanel.style.height = pct + '%';
+                objectPanel.style.flex = 'none';
+            } else {
+                var x = e.clientX - rect.left;
+                var pct = (x / rect.width) * 100;
+                if (pct < 15) pct = 15;
+                if (pct > 70) pct = 70;
+                objectPanel.style.width = pct + '%';
+            }
         });
+
         document.addEventListener('mouseup', function() {
             if (dragging) {
                 dragging = false;
@@ -745,7 +854,7 @@
         });
     })();
 
-    // --- Sync checkbox management ---
+    // ===== Sync checkbox management =====
     function updateSyncCount() {
         var checkboxes = document.querySelectorAll('.sync-checkbox:not(:disabled)');
         if (checkboxes.length === 0) return;
@@ -773,11 +882,82 @@
             }
         });
         updateSyncCount();
+        // Update header checkbox
+        var chkAll = document.getElementById('chkSelectAll');
+        if (chkAll) chkAll.checked = select;
     }
 
     function copyScript(btn) {
         var text = document.getElementById('scriptPreviewCode')?.textContent || '';
         navigator.clipboard.writeText(text).then(function() {
+            var icon = btn.querySelector('i');
+            icon.className = 'bi bi-clipboard-check';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(function() {
+                icon.className = 'bi bi-clipboard';
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    }
+
+    var scriptExpanded = false;
+    function toggleScript() {
+        var panel = document.getElementById('scriptPanel');
+        var toolbar = document.getElementById('scriptToolbar');
+        var btn = document.getElementById('btnToggleScript');
+        var visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : '';
+        toolbar.style.display = visible ? 'none' : '';
+        btn.innerHTML = visible
+            ? '<i class="bi bi-code-square"></i> Ver script SQL'
+            : '<i class="bi bi-code-square"></i> Ocultar script';
+    }
+
+    function toggleScriptExpand() {
+        var pre = document.getElementById('scriptPreviewCode');
+        var btn = document.getElementById('btnScriptExpand');
+        var closeBtn = document.getElementById('btnScriptClose');
+        scriptExpanded = !scriptExpanded;
+        if (scriptExpanded) {
+            pre.style.maxHeight = 'none';
+            pre.style.position = 'fixed';
+            pre.style.top = '0';
+            pre.style.left = '0';
+            pre.style.width = '100%';
+            pre.style.height = '100%';
+            pre.style.zIndex = '9999';
+            pre.style.borderRadius = '0';
+            pre.style.margin = '0';
+            btn.innerHTML = '<i class="bi bi-fullscreen-exit"></i>';
+            closeBtn.style.display = '';
+        } else {
+            pre.style.maxHeight = 'calc(100vh - 350px)';
+            pre.style.position = '';
+            pre.style.top = '';
+            pre.style.left = '';
+            pre.style.width = '';
+            pre.style.height = '';
+            pre.style.zIndex = '';
+            pre.style.borderRadius = '';
+            pre.style.margin = '';
+            btn.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>';
+            closeBtn.style.display = 'none';
+        }
+    }
+
+    // Copy source (side=0) or target (side=1) from the current diff table
+    function copyDiffSide(side, btn) {
+        var table = document.querySelector('#diffContainer .diff-table');
+        if (!table) return;
+        var colIndex = side === 0 ? 1 : 3;
+        var lines = [];
+        table.querySelectorAll('tbody tr').forEach(function(tr) {
+            var td = tr.cells[colIndex];
+            if (!td || td.classList.contains('diff-imaginary')) return;
+            var pre = td.querySelector('pre');
+            if (pre) lines.push(pre.textContent);
+        });
+        navigator.clipboard.writeText(lines.join('\n')).then(function() {
             var icon = btn.querySelector('i');
             icon.className = 'bi bi-clipboard-check';
             btn.classList.replace('btn-outline-secondary', 'btn-success');
@@ -829,25 +1009,47 @@
         }, 300);
     }
 
-    // Init on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Filtrar por Modified por defecto si hay resultados
-        if (document.querySelectorAll('.object-row').length > 0) {
-            filterStatus('Modified');
+    // ===== Keyboard navigation =====
+    document.addEventListener('keydown', function(e) {
+        // Script expand escape
+        if (e.key === 'Escape' && scriptExpanded) {
+            toggleScriptExpand();
+            return;
         }
-        updateSyncCount();
 
-        // Auto-show error modals
-        var errorModal = document.getElementById('errorModal');
-        if (errorModal) new bootstrap.Modal(errorModal).show();
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (!document.getElementById('splitContainer')) return;
 
-        var syncErrorModal = document.getElementById('syncErrorModal');
-        if (syncErrorModal) new bootstrap.Modal(syncErrorModal).show();
+        var rows = Array.from(document.querySelectorAll('#objectGrid .object-row'))
+            .filter(function(r) { return r.style.display !== 'none'; });
+        if (rows.length === 0) return;
+
+        var currentIdx = rows.findIndex(function(r) { return r.classList.contains('selected'); });
+
+        if (e.key === 'ArrowDown' || e.key === 'j') {
+            e.preventDefault();
+            var next = currentIdx < rows.length - 1 ? currentIdx + 1 : 0;
+            rows[next].click();
+            rows[next].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp' || e.key === 'k') {
+            e.preventDefault();
+            var prev = currentIdx > 0 ? currentIdx - 1 : rows.length - 1;
+            rows[prev].click();
+            rows[prev].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'n') {
+            nextDiff();
+        } else if (e.key === 'p') {
+            prevDiff();
+        } else if (e.key === 'Escape' && expanded) {
+            toggleExpand();
+        } else if (e.key === 'f' && !expanded) {
+            toggleExpand();
+        }
     });
 
-    // --- Sugerir Merge (IA) ---
+    // ===== Merge suggestion (AI) =====
     function suggestMerge() {
-        var selectedRow = document.querySelector('.object-row.selected');
+        var selectedRow = document.querySelector('#objectGrid .object-row.selected');
         if (!selectedRow) return;
 
         var objectName = selectedRow.dataset.name;
@@ -915,5 +1117,22 @@
             }, 2000);
         });
     }
+
+    // ===== Init on page load =====
+    document.addEventListener('DOMContentLoaded', function() {
+        initLayout();
+
+        if (document.querySelectorAll('#objectGrid .object-row').length > 0) {
+            filterStatus('Modified');
+        }
+        updateSyncCount();
+        updateGridRowCount();
+
+        var errorModal = document.getElementById('errorModal');
+        if (errorModal) new bootstrap.Modal(errorModal).show();
+
+        var syncErrorModal = document.getElementById('syncErrorModal');
+        if (syncErrorModal) new bootstrap.Modal(syncErrorModal).show();
+    });
 </script>
 }
