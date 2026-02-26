@@ -138,8 +138,11 @@ pipeline {
             steps {
                 script {
                     def sourceDir = (env.PROJECT_TYPE == 'static') ? '.\\dist' : '.\\publish'
+                    // .NET Framework: excluir web.config (tiene connection strings)
+                    // .NET Core: incluir web.config (AspNetCoreModuleV2) pero excluir appsettings (tiene connection strings)
+                    def excludeFiles = (env.PROJECT_TYPE == 'dotnet-framework') ? '/XF web.config .jenkins-env' : '/XF appsettings.json appsettings.*.json .jenkins-env'
                     bat """
-                        robocopy ${sourceDir} "${PHYSICAL_PATH}" /MIR /XD .git node_modules /XF web.config .jenkins-env /NFL /NDL /NP
+                        robocopy ${sourceDir} "${PHYSICAL_PATH}" /MIR /XD .git node_modules ${excludeFiles} /NFL /NDL /NP
                         exit /b 0
                     """
                 }
@@ -184,9 +187,23 @@ pipeline {
     post {
         success {
             echo "OK Deploy exitoso: https://${DOMAIN}"
+            script {
+                if (env.MAIL_SUCCESS?.trim()) {
+                    mail to: env.MAIL_SUCCESS,
+                         subject: "Deploy Exitoso: ${env.SITE_NAME}",
+                         body: "Deploy exitoso para ${env.SITE_NAME}\nURL: https://${env.DOMAIN}\nFecha: ${new Date().format('dd/MM/yyyy HH:mm')}"
+                }
+            }
         }
         failure {
             echo "ERROR Deploy fallo para ${SITE_NAME}"
+            script {
+                if (env.MAIL_FAILURE?.trim()) {
+                    mail to: env.MAIL_FAILURE,
+                         subject: "Deploy Fallido: ${env.SITE_NAME}",
+                         body: "El deploy fallo para ${env.SITE_NAME}.\nURL: https://${env.DOMAIN}\nRevisar logs en Jenkins: ${env.BUILD_URL}"
+                }
+            }
         }
     }
 }
